@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ExternalLink, Megaphone, Download } from "lucide-react";
-import { fetchWithLoadBalancer } from "@/utils/backendProxy";
+import { loadAnnouncements } from "@/utils/shared/announcements";
 import { useApp } from "@/context/AppContext";
 
 interface AnnouncementFile {
@@ -22,42 +22,26 @@ export default function AnnouncementToast() {
   const { userData } = useApp();
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [visible, setVisible] = useState(false);
+  const hasUser = !!userData;
+
   useEffect(() => {
-    if (!userData) return;
+    if (!hasUser) return;
 
     let isMounted = true;
-    const fetchAnnouncement = async () => {
-      try {
-        const res = await fetchWithLoadBalancer("/api/announcements");
-        if (!res.ok || !isMounted) return;
-        const data = await res.json();
-        const latest: Announcement = data.latest || data;
-        if (!latest || !latest.id) return;
-
-        const lastSeen = localStorage.getItem("ratio_last_announcement_id");
-        if (lastSeen !== latest.id) {
-          setAnnouncement(latest);
-          setVisible(true);
-        }
-      } catch (err) {
+    loadAnnouncements().then((data) => {
+      if (!isMounted || !data) return;
+      const latest: Announcement = data.latest || data;
+      if (!latest || !latest.id) return;
+      if (localStorage.getItem("ratio_last_announcement_id") !== latest.id) {
+        setAnnouncement(latest);
+        setVisible(true);
       }
-    };
-
-    fetchAnnouncement();
-
-    const handleRefresh = () => {
-      if (isMounted) {
-        fetchAnnouncement();
-      }
-    };
-
-    window.addEventListener("ratio_refresh_completed", handleRefresh);
+    });
 
     return () => {
       isMounted = false;
-      window.removeEventListener("ratio_refresh_completed", handleRefresh);
     };
-  }, [!userData]);
+  }, [hasUser]);
 
   const handleDismiss = () => {
     if (announcement?.id) {

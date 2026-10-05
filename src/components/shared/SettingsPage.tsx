@@ -41,6 +41,7 @@ import PrivacyProtocol from "@/components/shared/PrivacyProtocol";
 
 import WhatsNew from "./WhatsNew";
 import { fetchWithLoadBalancer } from "@/utils/backendProxy";
+import { loadAnnouncements } from "@/utils/shared/announcements";
 
 const WhatsappIcon = ({ size = 20 }: { size?: number }) => (
   <svg 
@@ -240,11 +241,8 @@ const SettingsPage = ({
     if (!showAnnouncements) return;
     (async () => {
       try {
-        const res = await fetchWithLoadBalancer("/api/announcements");
-        if (res.ok) {
-          const data = await res.json();
-          setAnnouncementsList(data.history || (data.id ? [data] : []));
-        }
+        const data = await loadAnnouncements();
+        if (data) setAnnouncementsList(data.history || (data.id ? [data] : []));
       } catch (e) {}
     })();
   }, [showAnnouncements]);
