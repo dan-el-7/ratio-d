@@ -65,7 +65,7 @@ const CompactSlot = ({ slot, isCancelled, onEditCancellation }: { slot: any; isC
   );
 };
 
-const TimelineCard = ({ slot, time, active, isCancelled, onClick, onEditCancellation }: { slot: any, time: string, active: boolean, isCancelled: boolean, onClick: () => void, onEditCancellation: () => void }) => {
+const TimelineCard = ({ slot, time, active, onClick }: { slot: any, time: string, active: boolean, onClick: () => void }) => {
   const isLab = slot?.type === "lab";
   
   if (!slot) {
@@ -88,7 +88,7 @@ const TimelineCard = ({ slot, time, active, isCancelled, onClick, onEditCancella
     <motion.div
       whileHover={{ y: -2 }}
       onClick={onClick}
-      className={`flex-1 min-w-0 h-full p-3 rounded-2xl flex flex-col justify-between cursor-pointer transition-all duration-300 shadow-sm border-[1.5px] relative ${isCancelled ? "opacity-60 grayscale" : ""} ${
+      className={`flex-1 min-w-0 h-full p-3 rounded-2xl flex flex-col justify-between cursor-pointer transition-all duration-300 shadow-sm border-[1.5px] ${
         active 
           ? "bg-theme-emphasis text-theme-bg border-transparent" 
           : isLab 
@@ -96,20 +96,16 @@ const TimelineCard = ({ slot, time, active, isCancelled, onClick, onEditCancella
             : "bg-theme-card border-theme-border text-theme-text hover:border-theme-text/20"
       }`}
     >
-      <button type="button" title={isCancelled ? "Edit cancellation" : "Cancel class"} aria-label={isCancelled ? "Edit cancellation" : "Cancel class"} onClick={(event) => { event.stopPropagation(); onEditCancellation(); }} className="absolute top-1 right-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-theme-bg/80 text-theme-muted">
-        <X size={12} strokeWidth={2.5} />
-      </button>
       <div className="flex flex-col">
         <span className={`text-[13px] font-black uppercase tracking-tighter leading-none mb-1`} style={{ fontFamily: 'var(--font-montserrat)' }}>
           {time.split('-')[0].trim()}
         </span>
-        <h4 className={`text-[9px] font-bold lowercase tracking-tight line-clamp-2 leading-tight ${active ? 'opacity-90' : 'opacity-60'} ${isCancelled ? "line-through" : ""}`} style={{ fontFamily: 'var(--font-afacad)' }}>
+        <h4 className={`text-[9px] font-bold lowercase tracking-tight line-clamp-2 leading-tight ${active ? 'opacity-90' : 'opacity-60'}`} style={{ fontFamily: 'var(--font-afacad)' }}>
           {slot.name}
         </h4>
       </div>
 
       <div className="flex flex-col">
-        {isCancelled && <span className="text-[7px] font-bold uppercase text-theme-muted">cancelled</span>}
         <span className={`text-[8px] font-black uppercase tracking-widest truncate ${active ? 'opacity-80' : 'opacity-40'}`} style={{ fontFamily: 'var(--font-afacad)' }}>
           {slot.room}
         </span>
@@ -517,15 +513,22 @@ export default function DesktopTimetable() {
                     {displayTimings.map(time => {
                       const slot = gridData[selectedDay][time];
                       const isCancelled = !!slot && isClassCancelled(cancelledClasses, slot, selectedDay, selectedDay === currentDayOrder && !isHoliday ? new Date() : null);
-                      return <TimelineCard
-                        key={time}
-                        time={time}
-                        slot={slot}
-                        active={activeHeroTime === time}
-                        isCancelled={isCancelled}
-                        onClick={() => setPreviewTime(time)}
-                        onEditCancellation={() => openCancellation(slot, selectedDay)}
-                      />;
+                      return (
+                        <div key={time} className={`relative flex flex-1 min-w-0 h-full ${isCancelled ? "opacity-60 grayscale [&_h4]:line-through" : ""}`}>
+                          <TimelineCard
+                            time={time}
+                            slot={slot}
+                            active={activeHeroTime === time}
+                            onClick={() => setPreviewTime(time)}
+                          />
+                          {isCancelled && <span className="pointer-events-none absolute bottom-[22px] left-3 z-10 text-[7px] font-bold uppercase text-theme-muted">cancelled</span>}
+                          {slot && (
+                            <button type="button" title={isCancelled ? "Edit cancellation" : "Cancel class"} aria-label={isCancelled ? "Edit cancellation" : "Cancel class"} onClick={() => openCancellation(slot, selectedDay)} className="absolute top-1 right-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-theme-bg/80 text-theme-muted">
+                              <X size={12} strokeWidth={2.5} />
+                            </button>
+                          )}
+                        </div>
+                      );
                     })}
                   </div>
                 </div>
