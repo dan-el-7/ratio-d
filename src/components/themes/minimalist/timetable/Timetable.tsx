@@ -24,6 +24,8 @@ import calendarDataJson from "@/data/calendar_data.json";
 import CustomClass from "./CustomClass";
 import { AcademiaData } from "@/types";
 import TimetablePreviewModal from "@/components/shared/TimetablePreviewModal";
+import ClassCancellationDialog from "@/components/shared/ClassCancellationDialog";
+import { getClassCancellationKey, NO_CANCELLED_DAYS, useClassCancellations } from "@/hooks/useClassCancellations";
 
 const BEZIER = [0.34, 0.15, 0.16, 0.96] as const;
 
@@ -127,6 +129,8 @@ export default function Timetable({
   const [classDay, setClassDay] = useState<number>(1);
 
   const [customClasses, setCustomClasses] = useState<Record<number, any[]>>({});
+  const [editingCancellation, setEditingCancellation] = useState<any>(null);
+  const { cancelledClasses, saveCancelledDays } = useClassCancellations();
 
   const nextWorkingDayOrder = useMemo(() => {
     const calData = academia?.calendarData || calendarDataJson || [];
@@ -441,8 +445,10 @@ export default function Timetable({
                     );
                   }
 
+                  const cancelledDays = cancelledClasses[getClassCancellationKey(item)] || NO_CANCELLED_DAYS;
+                  const isCancelled = cancelledDays.includes(activeDay);
                   const isLab = item.type === "lab";
-                  const isActuallyCurrent = item.isCurrent && isViewingToday;
+                  const isActuallyCurrent = item.isCurrent && isViewingToday && !isCancelled;
 
                   const currentTheme = isActuallyCurrent
                     ? "status-boxbg-safe status-border-safe shadow-md scale-[1.02] transform-gpu backdrop-blur-sm"
@@ -476,14 +482,21 @@ export default function Timetable({
                       </div>
 
                       <div
-                        className={`flex-1 border-[1.5px] rounded-[24px] p-5 flex flex-col transition-all relative ${currentTheme} ${!isActuallyCurrent && "shadow-sm"}`}
+                        className={`flex-1 border-[1.5px] rounded-[24px] p-5 flex flex-col transition-all relative ${currentTheme} ${!isActuallyCurrent && "shadow-sm"} ${isCancelled ? "opacity-60 grayscale" : ""}`}
                       >
+                        <button
+                          onClick={() => setEditingCancellation(item)}
+                          aria-label={isCancelled ? "Edit cancelled days" : "Mark class cancelled"}
+                          className="absolute top-3 right-3 rounded-full bg-theme-surface px-2.5 py-1 text-[9px] font-bold uppercase text-theme-muted hover:text-theme-text z-20"
+                        >
+                          {isCancelled ? "edit" : "cancel"}
+                        </button>
                         {item.isCustom && (
                           <button
                             onClick={() =>
                               handleDeleteCustom(activeDay, item.time)
                             }
-                            className="absolute top-3 right-3 w-8 h-8 bg-theme-secondary/10 text-theme-secondary rounded-full flex items-center justify-center hover:bg-theme-secondary/20 active:scale-95 transition-all z-20"
+                            className="absolute top-3 right-16 w-8 h-8 bg-theme-secondary/10 text-theme-secondary rounded-full flex items-center justify-center hover:bg-theme-secondary/20 active:scale-95 transition-all z-20"
                           >
                             <X size={16} strokeWidth={2.5} />
                           </button>
@@ -510,6 +523,11 @@ export default function Timetable({
                           </div>
 
                           <div className="flex items-center gap-2 ml-auto">
+                            {isCancelled && (
+                              <span className="text-[9px] font-bold uppercase tracking-widest text-theme-muted px-2 py-1 rounded-md border border-theme-border">
+                                cancelled
+                              </span>
+                            )}
                             {isLab && !isActuallyCurrent && (
                               <span
                                 className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#0EA5E9] bg-[#0EA5E9]/10 px-2 py-1 rounded-md shrink-0"
@@ -530,13 +548,13 @@ export default function Timetable({
                         </div>
 
                         <span
-                          className={`text-[24px] font-black uppercase tracking-widest leading-none mb-1 ${textTheme}`}
+                          className={`text-[24px] font-black uppercase tracking-widest leading-none mb-1 ${textTheme} ${isCancelled ? "line-through" : ""}`}
                           style={{ fontFamily: "'Montserrat', sans-serif" }}
                         >
                           {item.code}
                         </span>
                         <span
-                          className={`text-[14px] font-medium lowercase tracking-wide mb-5 ${subTextTheme}`}
+                          className={`text-[14px] font-medium lowercase tracking-wide mb-5 ${subTextTheme} ${isCancelled ? "line-through" : ""}`}
                           style={{ fontFamily: "'Afacad', sans-serif" }}
                         >
                           {item.name}
@@ -656,6 +674,16 @@ export default function Timetable({
         classDay={classDay}
         setClassDay={setClassDay}
         handleAddClass={handleAddClass}
+      />
+
+      <ClassCancellationDialog
+        slot={editingCancellation}
+        cancelledDays={editingCancellation ? cancelledClasses[getClassCancellationKey(editingCancellation)] || NO_CANCELLED_DAYS : NO_CANCELLED_DAYS}
+        onClose={() => setEditingCancellation(null)}
+        onSave={(days) => {
+          saveCancelledDays(editingCancellation, days);
+          setEditingCancellation(null);
+        }}
       />
 
       <TimetablePreviewModal 

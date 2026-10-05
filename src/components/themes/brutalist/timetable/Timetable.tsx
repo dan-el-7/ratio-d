@@ -15,6 +15,8 @@ import { flavorText } from "@/utils/shared/flavortext";
 import { useApp } from "@/context/AppContext";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import TimetablePreviewModal from "@/components/shared/TimetablePreviewModal";
+import ClassCancellationDialog from "@/components/shared/ClassCancellationDialog";
+import { getClassCancellationKey, NO_CANCELLED_DAYS, useClassCancellations } from "@/hooks/useClassCancellations";
 import CustomClass from "../../minimalist/timetable/CustomClass";
 import { Haptics } from "@/utils/shared/haptics";
 import { useAppLayout } from "@/context/AppLayoutContext";
@@ -25,6 +27,8 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeDayOrder, setActiveDayOrder] = useState(1);
   const [customClasses, setCustomClasses] = useState<Record<number, any[]>>({});
+  const [editingCancellation, setEditingCancellation] = useState<any>(null);
+  const { cancelledClasses, saveCancelledDays } = useClassCancellations();
   const [mounted, setMounted] = useState(false);
   const [introMode, setIntroMode] = useState(true);
   
@@ -298,6 +302,9 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
                     );
                   }
 
+                  const cancelledDays = cancelledClasses[getClassCancellationKey(item)] || NO_CANCELLED_DAYS;
+                  const isCancelled = cancelledDays.includes(activeDayOrder);
+
                   return (
                     <motion.div
                       key={item.id}
@@ -307,10 +314,11 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
                       transition={{ delay: index * 0.05 }}
                       className={`w-full rounded-[24px] p-5 relative border transition-all duration-300
                         ${
-                          item.isCurrent
+                          item.isCurrent && !isCancelled
                             ? "bg-white border-[#3b82f6] shadow-xl ring-1 ring-blue-100"
                             : "bg-white border-[#f0f0f0]"
                         }
+                        ${isCancelled ? "opacity-50 grayscale" : ""}
                       `}
                     >
                       <div className="flex justify-between items-start mb-4">
@@ -330,9 +338,18 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {isCancelled && <span className="text-[9px] font-bold uppercase text-black/40">cancelled</span>}
                           <div className="text-[9px] font-bold text-black/40 uppercase tracking-widest bg-black/5 px-2 py-1 rounded">
                             {item.slot || (item.type === "lab" ? "PRAC" : "THRY")}
                           </div>
+                          <button
+                            type="button"
+                            aria-label={isCancelled ? "Edit cancelled days" : "Mark class cancelled"}
+                            onClick={() => setEditingCancellation(item)}
+                            className="text-[9px] font-bold uppercase text-black/40 hover:text-black"
+                          >
+                            {isCancelled ? "edit" : "cancel"}
+                          </button>
                           {item.isCustom && (
                             <button
                               onClick={() => {
@@ -352,7 +369,7 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
                           className="text-lg font-bold text-black leading-tight lowercase mb-2"
                           style={{ fontFamily: "Aonic" }}
                         >
-                          {item.name || item.course}
+                          <span className={isCancelled ? "line-through" : ""}>{item.name || item.course}</span>
                         </h3>
                         <div className="flex items-center gap-2">
                           <User size={12} className="text-black/30" />
@@ -375,7 +392,7 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
                           </span>
                         </div>
 
-                        {item.isCurrent && (
+                        {item.isCurrent && !isCancelled && (
                           <span className="flex items-center gap-1.5 text-[9px] font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full uppercase tracking-tighter animate-pulse">
                             <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
                             In Progress
@@ -415,6 +432,16 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
         classDay={classDay}
         setClassDay={setClassDay}
         handleAddClass={handleAddClass}
+      />
+
+      <ClassCancellationDialog
+        slot={editingCancellation}
+        cancelledDays={editingCancellation ? cancelledClasses[getClassCancellationKey(editingCancellation)] || NO_CANCELLED_DAYS : NO_CANCELLED_DAYS}
+        onClose={() => setEditingCancellation(null)}
+        onSave={(days) => {
+          saveCancelledDays(editingCancellation, days);
+          setEditingCancellation(null);
+        }}
       />
 
       <TimetablePreviewModal 
