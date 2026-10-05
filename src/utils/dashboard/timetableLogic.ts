@@ -49,6 +49,13 @@ export const buildCourseMap = (data: any) => {
   return map;
 };
 
+export const isPracticalScheduleItem = (details: any) => {
+  const type = String(details?.type || "").trim().toLowerCase();
+  if (type === "lab" || type === "practical") return true;
+  if (type === "theory" || type === "lecture") return false;
+  return String(details?.slot || "").split(/[,/\s]+/).some((slot) => /^P\d*$/i.test(slot));
+};
+
 export const processSchedule = (
   schedule: any,
   _unusedCustomClasses: any,
@@ -76,10 +83,7 @@ export const processSchedule = (
         details.course ||
         "Unknown Subject";
 
-      const isLab =
-        details.slot?.toUpperCase().includes("P") ||
-        details.type?.toLowerCase() === "lab" ||
-        details.type?.toLowerCase() === "practical";
+      const isLab = isPracticalScheduleItem(details);
 
       return {
         id: details.id || `sch-${activeDay}-${idx}-${cleanCode}`,

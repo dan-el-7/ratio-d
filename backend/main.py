@@ -704,9 +704,10 @@ async def portal_refresh(creds: PortalCredentials, request: Request):
     if not creds.cookies:
         raise HTTPException(status_code=401, detail={"type": "SESSION_EXPIRED"})
     client = PortalClient(creds.cookies)
-    att_html, marks = await asyncio.gather(
+    att_html, marks, tt_html = await asyncio.gather(
         client.get_attendance_html(),
-        client.get_marks_data()
+        client.get_marks_data(),
+        client.get_timetable_html()
     )
     if att_html is None:
         if creds.username and creds.password:
@@ -732,9 +733,10 @@ async def portal_refresh(creds: PortalCredentials, request: Request):
                         print(f"  -> [OCR] Portal background re-auth successful!", flush=True)
                         reauth_success = True
                         client = PortalClient(res["cookies"])
-                        att_html, marks = await asyncio.gather(
+                        att_html, marks, tt_html = await asyncio.gather(
                             client.get_attendance_html(),
-                            client.get_marks_data()
+                            client.get_marks_data(),
+                            client.get_timetable_html()
                         )
                         await session.client.aclose()
                         break
@@ -765,6 +767,7 @@ async def portal_refresh(creds: PortalCredentials, request: Request):
     if att_html is None:
         raise HTTPException(status_code=401, detail={"type": "SESSION_EXPIRED"})
     courses, monthly = await asyncio.to_thread(PortalAttendanceService.parse, att_html)
+    schedule, course_map = PortalTimetableService.parse(tt_html) if tt_html else ({}, {})
     if courses and marks:
         mark_codes = {m.get("courseCode", "").strip().lower() for m in marks}
         for c in courses:
@@ -788,6 +791,10 @@ async def portal_refresh(creds: PortalCredentials, request: Request):
     }
     if marks:
         res["marks"] = marks
+    if schedule:
+        res["schedule"] = schedule
+    if course_map:
+        res["courses"] = course_map
     return res
 
 

@@ -17,7 +17,7 @@ const CompactSlot = ({ slot }: { slot: any }) => {
     );
   }
 
-  const isLab = slot.type === "lab" || slot.slot?.includes("P");
+  const isLab = slot.type === "lab";
   
   return (
     <div
