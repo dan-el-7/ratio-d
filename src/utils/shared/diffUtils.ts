@@ -106,15 +106,15 @@ export function compareData(oldData: any, newData: any): DataDiff | null {
             normalize(o.title || o.testName || "") === testTitle
           );
 
-          const newScore = parseFloat(test.mark || test.obtained || "0");
-          const oldScore = matchingOldTest ? parseFloat(matchingOldTest.mark || matchingOldTest.obtained || "0") : -1;
+          const newScore = parseFloat(test.mark ?? test.marks ?? test.obtained ?? "0");
+          const oldScore = matchingOldTest ? parseFloat(matchingOldTest.mark ?? matchingOldTest.marks ?? matchingOldTest.obtained ?? "0") : -1;
 
-          if (oldScore !== -1 && Math.abs(newScore - oldScore) > 0.01) {
+          if (!isNaN(newScore) && (oldScore === -1 || Math.abs(newScore - oldScore) > 0.01)) {
             diff.newMarks.push({
-              course: newSub.courseTitle || newSub.courseCode,
+              course: newSub.courseTitle || newSub.title || newSub.courseCode,
               test: test.title || test.testName || "Test",
               score: newScore,
-              max: parseFloat(test.maxMark || test.max || "0"),
+              max: parseFloat(test.maxMark ?? test.max ?? test.total ?? "0"),
               isPractical: newIsPrac,
             });
           }
