@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, memo, useMemo } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
@@ -8,6 +9,9 @@ import {
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { useCalendarData } from "@/hooks/useCalendarData";
+import CalendarScheduleCard from "@/components/shared/CalendarScheduleCard";
+import { getCalendarScheduleItems } from "@/utils/timetable/calendarSchedule";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
 import { Haptics } from "@/utils/shared/haptics";
 
 const BEZIER = [0.34, 0.15, 0.16, 0.96] as const;
@@ -121,7 +125,11 @@ const CalendarDay = memo(
 CalendarDay.displayName = "CalendarDay";
 
 const Calendar = ({ data, academia }: any) => {
+  const { cancelledClasses } = useClassCancellations();
   const [mounted, setMounted] = useState(false);
+  const [showScheduleCard, setShowScheduleCard] = useState(false);
+  const [lastCalendarTap, setLastCalendarTap] = useState("");
+  const router = useRouter();
   const activeData = useMemo(() => 
     academia?.calendarData || data?.calendarData || [], 
     [academia?.calendarData, data?.calendarData]
@@ -144,7 +152,30 @@ const Calendar = ({ data, academia }: any) => {
     goToToday,
     gridData,
     handleDateClick,
+    selectedDate,
+    currentEvent,
   } = useCalendarData(activeData, isTargetAudience);
+
+  const schedule = academia?.effectiveSchedule || data?.effectiveSchedule || data?.schedule || data?.timetable || data?.time_table || {};
+  const scheduleItems = useMemo(
+    () => getCalendarScheduleItems(schedule, currentEvent?.dayOrder || currentEvent?.order, cancelledClasses, selectedDate),
+    [schedule, currentEvent, cancelledClasses, selectedDate],
+  );
+
+  const handleCalendarDateClick = (date: Date) => {
+    const dateKey = date.toDateString();
+    if (lastCalendarTap === dateKey && selectedDate.toDateString() === dateKey) setShowScheduleCard(true);
+    else {
+      setLastCalendarTap(dateKey);
+      setShowScheduleCard(false);
+    }
+    handleDateClick(date);
+  };
+
+  const resetCalendarTap = () => {
+    setLastCalendarTap("");
+    setShowScheduleCard(false);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -238,6 +269,7 @@ const Calendar = ({ data, academia }: any) => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
+                    resetCalendarTap();
                     Haptics.light();
                     handlePrevMonth();
                   }}
@@ -247,6 +279,7 @@ const Calendar = ({ data, academia }: any) => {
                 </button>
                 <button
                   onClick={() => {
+                    resetCalendarTap();
                     Haptics.light();
                     goToToday();
                   }}
@@ -256,6 +289,7 @@ const Calendar = ({ data, academia }: any) => {
                 </button>
                 <button
                   onClick={() => {
+                    resetCalendarTap();
                     Haptics.light();
                     handleNextMonth();
                   }}
@@ -266,7 +300,7 @@ const Calendar = ({ data, academia }: any) => {
               </div>
             </div>
             <div className="grid grid-cols-7 gap-2 mb-4 shrink-0">
-              {["m", "t", "w", "t", "f", "s", "s"].map((d, i) => (
+              {["s", "m", "t", "w", "t", "f", "s"].map((d, i) => (
                 <div
                   key={i}
                   className="text-center text-[12px] font-bold text-theme-muted uppercase tracking-widest"
@@ -284,13 +318,24 @@ const Calendar = ({ data, academia }: any) => {
                   <CalendarDay
                     key={item.key}
                     item={item}
-                    onClick={handleDateClick}
+                    onClick={handleCalendarDateClick}
                   />
                 ),
               )}
             </div>
           </motion.div>
         </motion.div>
+        <AnimatePresence>
+          {showScheduleCard && scheduleItems.length > 0 && (
+            <CalendarScheduleCard
+              date={selectedDate}
+              dayOrder={currentEvent?.dayOrder || currentEvent?.order || "-"}
+              classes={scheduleItems}
+              onClose={() => setShowScheduleCard(false)}
+              onOpenTimetable={() => router.push("/timetable")}
+            />
+          )}
+        </AnimatePresence>
         <div
           className="absolute bottom-0 left-0 right-0 h-48 z-20 pointer-events-none"
           style={{ background: 'linear-gradient(to top, var(--theme-bg) 0%, color-mix(in srgb, var(--theme-bg) 80%, transparent) 60%, transparent 100%)' }}

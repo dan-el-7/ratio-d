@@ -464,9 +464,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (portalData) {
         fresh.attendance = portalData.attendance;
         fresh.isPortal = true;
-        for (const key of ["monthly", "marks", "schedule", "courses", "profile"]) {
+        for (const key of ["monthly", "marks", "courses", "profile"]) {
           if (portalData[key]) fresh[key] = portalData[key];
         }
+        if (portalData.schedule && !hasAcademia) fresh.schedule = portalData.schedule;
       }
       if (academiaData) {
         const { success, ...rest } = academiaData;
@@ -476,6 +477,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem("ratio_timetable_synced", "1");
         }
       }
+
+      if (fresh.schedule) fresh.timetable = fresh.schedule;
 
       EncryptionUtils.setSessionCookie();
 

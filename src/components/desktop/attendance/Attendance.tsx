@@ -15,6 +15,7 @@ import { useApp } from "@/context/AppContext";
 import calendarDataJson from "@/data/calendar_data.json";
 import { DayPicker } from "react-day-picker";
 import { AttendanceRecord, CalendarEvent } from "@/types";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
 
 const SubjectCard = ({ code, title, percent, present, conducted, val, safe, type, recoveryDate, hasChanged, predConducted, predPresent }: {
   code: string;
@@ -180,6 +181,7 @@ const SubjectCard = ({ code, title, percent, present, conducted, val, safe, type
 
 export default function DesktopAttendance() {
   const { userData, setPortalAuthOpen } = useApp();
+  const { cancelledClasses } = useClassCancellations();
   const [isPredicting, setIsPredicting] = useState(false);
   const [isStatsExpanded, setIsStatsExpanded] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -198,9 +200,10 @@ export default function DesktopAttendance() {
       selectedDates,
       calDataToUse as CalendarEvent[],
       userData?.timetable || userData?.schedule || {},
-      baseAttendance
+      baseAttendance,
+      cancelledClasses
     );
-  }, [isPredicting, selectedDates, baseAttendance, userData]);
+  }, [isPredicting, selectedDates, baseAttendance, userData, cancelledClasses]);
 
   const processedList = useMemo(() => {
     const list = getProcessedList(baseAttendance, impactMap, isPredicting);
@@ -208,7 +211,7 @@ export default function DesktopAttendance() {
       const origStatus = getStatus(parseFloat(s.percentage), s.conducted, s.present);
       const calData = userData?.calendarData;
       const calDataToUse = (calData && calData.length > 0) ? calData : (calendarDataJson as any[] || []);
-      const recDate = getRecoveryDate(s, calDataToUse as CalendarEvent[], userData?.timetable || userData?.schedule || {}, selectedDates, predictAction);
+      const recDate = getRecoveryDate(s, calDataToUse as CalendarEvent[], userData?.timetable || userData?.schedule || {}, selectedDates, predictAction, cancelledClasses);
       return {
         ...s,
         percent: s.pred.pct.toFixed(1),
@@ -219,7 +222,7 @@ export default function DesktopAttendance() {
         recoveryDate: recDate,
       };
     });
-  }, [baseAttendance, impactMap, isPredicting, userData, selectedDates, predictAction]);
+  }, [baseAttendance, impactMap, isPredicting, userData, selectedDates, predictAction, cancelledClasses]);
 
   const stats = useMemo(() => {
     let totalConducted = 0;

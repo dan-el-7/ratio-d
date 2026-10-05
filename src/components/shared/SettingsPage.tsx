@@ -532,7 +532,7 @@ const SettingsPage = ({
                       )}
                       {item.created_at && (
                         <p className="text-[9px] font-mono text-theme-muted/60 text-right pt-1">
-                          {new Date(item.created_at).toLocaleString()}
+                          {new Date(item.created_at).toLocaleString("en-IN")}
                         </p>
                       )}
                     </div>

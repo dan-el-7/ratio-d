@@ -2,9 +2,12 @@
 import React, { useState, useMemo } from "react";
 import { ReactLenis } from "lenis/react";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Info, Target, ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { getCalendarGrid, getCalendarDisplay } from "@/utils/dashboard/calendarLogic";
+import { getCalendarScheduleItems } from "@/utils/timetable/calendarSchedule";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
 import calendarDataJson from "@/data/calendar_data.json";
 import { CalendarEvent, CalendarSlot } from "@/types";
 import { Haptics } from "@/utils/shared/haptics";
@@ -83,6 +86,8 @@ const DayCell = ({ slot, onClick }: { slot: CalendarSlot & { event?: CalendarEve
 
 export default function DesktopCalendar() {
   const { userData } = useApp();
+  const { cancelledClasses } = useClassCancellations();
+  const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -110,9 +115,14 @@ export default function DesktopCalendar() {
   }, [currentDate, selectedDate, calendarData]);
 
   const selectedEvent = calendarData[selectedDate.toDateString()];
+  const schedule = userData?.effectiveSchedule || userData?.timetable || userData?.schedule || userData?.time_table || {};
+  const scheduleItems = useMemo(
+    () => getCalendarScheduleItems(schedule, selectedEvent?.dayOrder || selectedEvent?.order, cancelledClasses, selectedDate),
+    [schedule, selectedEvent, cancelledClasses, selectedDate],
+  );
 
   const dayOrderString = useMemo(() => {
-    const order = selectedEvent?.order;
+    const order = selectedEvent?.dayOrder || selectedEvent?.order;
     if (order && order !== "-" && order !== "") {
       return `day order ${!isNaN(Number(order)) ? order.padStart(2, '0') : order}`;
     }
@@ -122,8 +132,8 @@ export default function DesktopCalendar() {
   const detailItems = useMemo(() => {
     const items: { title: string, content: string }[] = [];
     const fullDesc = selectedEvent?.description || "";
-    
-    if (!fullDesc) {
+
+    if (!fullDesc && scheduleItems.length === 0) {
       const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
       if (isWeekend) {
         items.push({ title: "weekend", content: "chill out. nothing to see here." });
@@ -145,8 +155,15 @@ export default function DesktopCalendar() {
       }
     });
 
+    scheduleItems.forEach((item) => {
+      items.push({
+        title: item.time,
+        content: `${item.name} · ${item.room}${item.slot ? ` · ${item.slot}` : ""}${item.cancelled ? " · cancelled" : ""}`,
+      });
+    });
+
     return items;
-  }, [selectedEvent, selectedDate]);
+  }, [selectedEvent, selectedDate, scheduleItems]);
 
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -183,12 +200,12 @@ export default function DesktopCalendar() {
         </header>
 
         <div className="px-10 py-2.5 grid grid-cols-7 gap-3 border-y border-theme-border bg-theme-surface/10">
-          {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map(d => (
+          {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map(d => (
             <span key={d} className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-theme-muted" style={{ fontFamily: 'var(--font-montserrat)' }}>{d}</span>
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar px-10 pb-10 pt-4 flex items-start justify-center">
+        <div data-lenis-prevent className="flex-1 overflow-y-auto no-scrollbar px-10 pb-10 pt-4 flex items-start justify-center">
           <div className="grid grid-cols-7 gap-3 w-full">
             {monthGrid.map((slot: CalendarSlot, idx: number) => (
               <DayCell 
@@ -201,7 +218,7 @@ export default function DesktopCalendar() {
         </div>
       </div>
 
-      <div className="flex-1 bg-theme-surface/20 flex flex-col p-12 relative overflow-y-auto overflow-x-hidden no-scrollbar">
+      <div data-lenis-prevent className="flex-1 min-h-0 bg-theme-surface/20 flex flex-col p-12 relative overflow-y-auto overflow-x-hidden no-scrollbar">
         <div className="mb-2 shrink-0">
           <div className="flex items-baseline gap-4 mb-2">
             <h2 className="text-[120px] font-black tracking-tighter leading-none text-theme-text" style={{ fontFamily: 'var(--font-montserrat)' }}>
@@ -249,6 +266,15 @@ export default function DesktopCalendar() {
                 </div>
               ))}
             </div>
+            {scheduleItems.length > 0 && (
+              <button
+                type="button"
+                onClick={() => router.push("/timetable")}
+                className="mt-8 flex items-center justify-between rounded-2xl bg-theme-emphasis px-5 py-4 text-xs font-black uppercase tracking-widest text-theme-bg transition-transform active:scale-[0.98]"
+              >
+                timetable <ArrowRight size={16} />
+              </button>
+            )}
           </div>
         </div>
 

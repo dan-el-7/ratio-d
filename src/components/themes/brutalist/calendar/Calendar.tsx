@@ -1,8 +1,12 @@
 "use client";
-import React, { useMemo, memo } from "react";
+import React, { useMemo, memo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Target, Calendar } from "lucide-react";
 import { useCalendarData } from "@/hooks/useCalendarData";
+import CalendarScheduleCard from "@/components/shared/CalendarScheduleCard";
+import { getCalendarScheduleItems } from "@/utils/timetable/calendarSchedule";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
 import calendarDataJson from "@/data/calendar_data.json";
 
 const CalendarDay = memo(
@@ -85,6 +89,10 @@ const CalendarDay = memo(
 CalendarDay.displayName = "CalendarDay";
 
 const CalendarPage = ({ calendarData, academia, data }: any) => {
+  const { cancelledClasses } = useClassCancellations();
+  const [showScheduleCard, setShowScheduleCard] = useState(false);
+  const [lastCalendarTap, setLastCalendarTap] = useState("");
+  const router = useRouter();
   const activeData = useMemo(() => {
     return (academia?.calendarData?.length > 0)
       ? academia.calendarData
@@ -111,7 +119,29 @@ const CalendarPage = ({ calendarData, academia, data }: any) => {
     goToToday,
     gridData,
     handleDateClick,
+    selectedDate,
+    currentEvent,
   } = useCalendarData(activeData, isTargetAudience);
+
+  const schedule = academia?.effectiveSchedule || data?.effectiveSchedule || data?.schedule || data?.timetable || data?.time_table || {};
+  const scheduleItems = useMemo(
+    () => getCalendarScheduleItems(schedule, currentEvent?.dayOrder || currentEvent?.order, cancelledClasses, selectedDate),
+    [schedule, currentEvent, cancelledClasses, selectedDate],
+  );
+  const handleCalendarDateClick = (date: Date) => {
+    const dateKey = date.toDateString();
+    if (lastCalendarTap === dateKey && selectedDate.toDateString() === dateKey) setShowScheduleCard(true);
+    else {
+      setLastCalendarTap(dateKey);
+      setShowScheduleCard(false);
+    }
+    handleDateClick(date);
+  };
+
+  const resetCalendarTap = () => {
+    setLastCalendarTap("");
+    setShowScheduleCard(false);
+  };
 
   const brutalistTheme = useMemo(() => {
     if (display.label === "day order" && (display.infoSub?.toLowerCase().includes("exam") || display.infoMain?.toLowerCase().includes("exam"))) {
@@ -192,20 +222,20 @@ const CalendarPage = ({ calendarData, academia, data }: any) => {
             {monthTitle}
           </div>
           <button
-            onClick={handlePrevMonth}
+            onClick={() => { resetCalendarTap(); handlePrevMonth(); }}
             className="p-2 hover:bg-black/5 rounded-full transition-colors text-[#050505] z-10"
           >
             <ChevronLeft size={24} />
           </button>
           <div className="flex items-center gap-1 z-10">
             <button
-              onClick={handleNextMonth}
+              onClick={() => { resetCalendarTap(); handleNextMonth(); }}
               className="p-2 hover:bg-black/5 rounded-full transition-colors text-[#050505]"
             >
               <ChevronRight size={24} />
             </button>
             <button
-              onClick={goToToday}
+              onClick={() => { resetCalendarTap(); goToToday(); }}
               className="p-2 hover:bg-black/5 rounded-full transition-colors text-[#050505] opacity-60 hover:opacity-100"
             >
               <Target size={20} />
@@ -213,7 +243,7 @@ const CalendarPage = ({ calendarData, academia, data }: any) => {
           </div>
         </div>
         <div className="grid grid-cols-7 text-center mb-3">
-          {["m", "t", "w", "t", "f", "s", "s"].map((d, i) => (
+          {["s", "m", "t", "w", "t", "f", "s"].map((d, i) => (
             <span
               key={i}
               className="text-[10px] font-black text-black/30 font-mono uppercase tracking-widest"
@@ -231,13 +261,26 @@ const CalendarPage = ({ calendarData, academia, data }: any) => {
                 <CalendarDay
                   key={item.key}
                   item={item}
-                  onClick={handleDateClick}
+                  onClick={handleCalendarDateClick}
                 />
               );
             })}
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showScheduleCard && scheduleItems.length > 0 && (
+          <CalendarScheduleCard
+            variant="brutalist"
+            date={selectedDate}
+            dayOrder={currentEvent?.dayOrder || currentEvent?.order || "-"}
+            classes={scheduleItems}
+            onClose={() => setShowScheduleCard(false)}
+            onOpenTimetable={() => router.push("/timetable")}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {introMode && (

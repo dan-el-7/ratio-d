@@ -22,7 +22,7 @@ export function useDashboardAlerts(academia: any, isTargetAudience: boolean) {
         title: "Assessment",
         desc: ev.description,
         type: "exam",
-        date: ev.date.toLocaleDateString(),
+        date: ev.date.toLocaleDateString("en-IN"),
       }));
   }, [contextCalendarData, isTargetAudience]);
 
@@ -47,7 +47,7 @@ export function useDashboardAlerts(academia: any, isTargetAudience: boolean) {
         title: "Upcoming Break",
         desc: ev.description,
         type: "holiday",
-        date: ev.date.toLocaleDateString(),
+        date: ev.date.toLocaleDateString("en-IN"),
       }));
   }, [contextCalendarData]);
 

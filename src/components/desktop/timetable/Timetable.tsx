@@ -3,11 +3,19 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/context/AppContext";
 import { buildCourseMap, processSchedule, parseTimetableTime } from "@/utils/dashboard/timetableLogic";
-import { Clock, Plus, ChevronRight, LayoutGrid, List, MapPin, Coffee, Zap, Download, RotateCcw } from "lucide-react";
+import { Clock, Plus, ChevronRight, LayoutGrid, List, MapPin, Coffee, Zap, Download, RotateCcw, X } from "lucide-react";
 import { toPng } from 'html-to-image';
 import TimetablePreviewModal from "@/components/shared/TimetablePreviewModal";
+import ClassCancellationDialog from "@/components/shared/ClassCancellationDialog";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
+import {
+  EMPTY_CANCELLATION_RULE,
+  getClassCancellationKey,
+  getClassCancellationRule,
+  isClassCancelled,
+} from "@/utils/timetable/classCancellations";
 
-const CompactSlot = ({ slot }: { slot: any }) => {
+const CompactSlot = ({ slot, isCancelled, onEditCancellation }: { slot: any; isCancelled: boolean; onEditCancellation: () => void }) => {
   if (!slot) {
     return (
       <div 
@@ -20,21 +28,24 @@ const CompactSlot = ({ slot }: { slot: any }) => {
     );
   }
 
-  const isLab = slot.type === "lab" || slot.slot?.includes("P");
+  const isLab = slot.type === "lab";
   
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className={`h-full w-full p-2.5 rounded-xl border-[1.5px] transition-all duration-300 flex flex-col justify-between group overflow-hidden ${
+      className={`h-full w-full p-2.5 rounded-xl border-[1.5px] transition-all duration-300 flex flex-col justify-between group overflow-hidden relative ${isCancelled ? "opacity-60 grayscale" : ""} ${
         isLab 
           ? "bg-[#0EA5E9]/5 border-[#0EA5E9]/30" 
           : "bg-theme-card border-theme-border shadow-sm hover:border-theme-text/20"
       }`}
     >
+      <button type="button" title={isCancelled ? "Edit cancellation" : "Cancel class"} aria-label={isCancelled ? "Edit cancellation" : "Cancel class"} onClick={onEditCancellation} className="absolute top-1 right-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-theme-bg/80 text-theme-muted">
+        <X size={12} strokeWidth={2.5} />
+      </button>
       <div className="flex flex-col gap-0.5">
         <h3 
-          className={`text-[9px] font-black uppercase tracking-tight leading-[1.1] line-clamp-2 ${isLab ? "text-[#0EA5E9]" : "text-theme-text"}`} 
+          className={`text-[9px] font-black uppercase tracking-tight leading-[1.1] line-clamp-2 ${isLab ? "text-[#0EA5E9]" : "text-theme-text"} ${isCancelled ? "line-through" : ""}`}
           style={{ fontFamily: 'var(--font-montserrat)' }}
         >
           {slot.name}
@@ -45,6 +56,7 @@ const CompactSlot = ({ slot }: { slot: any }) => {
       </div>
       
       <div className="flex flex-col mt-0.5">
+        {isCancelled && <span className="text-[6px] font-bold uppercase text-theme-muted">cancelled</span>}
         <span className={`text-[8px] font-black uppercase text-theme-muted/60`} style={{ fontFamily: 'var(--font-afacad)' }}>
           {slot.room}
         </span>
@@ -53,8 +65,8 @@ const CompactSlot = ({ slot }: { slot: any }) => {
   );
 };
 
-const TimelineCard = ({ slot, time, active, onClick }: { slot: any, time: string, active: boolean, onClick: () => void }) => {
-  const isLab = slot?.type === "lab" || slot?.slot?.includes("P");
+const TimelineCard = ({ slot, time, active, isCancelled, onClick, onEditCancellation }: { slot: any, time: string, active: boolean, isCancelled: boolean, onClick: () => void, onEditCancellation: () => void }) => {
+  const isLab = slot?.type === "lab";
   
   if (!slot) {
     return (
@@ -76,7 +88,7 @@ const TimelineCard = ({ slot, time, active, onClick }: { slot: any, time: string
     <motion.div
       whileHover={{ y: -2 }}
       onClick={onClick}
-      className={`flex-1 min-w-0 h-full p-3 rounded-2xl flex flex-col justify-between cursor-pointer transition-all duration-300 shadow-sm border-[1.5px] ${
+      className={`flex-1 min-w-0 h-full p-3 rounded-2xl flex flex-col justify-between cursor-pointer transition-all duration-300 shadow-sm border-[1.5px] relative ${isCancelled ? "opacity-60 grayscale" : ""} ${
         active 
           ? "bg-theme-emphasis text-theme-bg border-transparent" 
           : isLab 
@@ -84,16 +96,20 @@ const TimelineCard = ({ slot, time, active, onClick }: { slot: any, time: string
             : "bg-theme-card border-theme-border text-theme-text hover:border-theme-text/20"
       }`}
     >
+      <button type="button" title={isCancelled ? "Edit cancellation" : "Cancel class"} aria-label={isCancelled ? "Edit cancellation" : "Cancel class"} onClick={(event) => { event.stopPropagation(); onEditCancellation(); }} className="absolute top-1 right-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-theme-bg/80 text-theme-muted">
+        <X size={12} strokeWidth={2.5} />
+      </button>
       <div className="flex flex-col">
         <span className={`text-[13px] font-black uppercase tracking-tighter leading-none mb-1`} style={{ fontFamily: 'var(--font-montserrat)' }}>
           {time.split('-')[0].trim()}
         </span>
-        <h4 className={`text-[9px] font-bold lowercase tracking-tight line-clamp-2 leading-tight ${active ? 'opacity-90' : 'opacity-60'}`} style={{ fontFamily: 'var(--font-afacad)' }}>
+        <h4 className={`text-[9px] font-bold lowercase tracking-tight line-clamp-2 leading-tight ${active ? 'opacity-90' : 'opacity-60'} ${isCancelled ? "line-through" : ""}`} style={{ fontFamily: 'var(--font-afacad)' }}>
           {slot.name}
         </h4>
       </div>
 
       <div className="flex flex-col">
+        {isCancelled && <span className="text-[7px] font-bold uppercase text-theme-muted">cancelled</span>}
         <span className={`text-[8px] font-black uppercase tracking-widest truncate ${active ? 'opacity-80' : 'opacity-40'}`} style={{ fontFamily: 'var(--font-afacad)' }}>
           {slot.room}
         </span>
@@ -104,6 +120,9 @@ const TimelineCard = ({ slot, time, active, onClick }: { slot: any, time: string
 
 export default function DesktopTimetable() {
   const { userData, calendarData } = useApp();
+  const { cancelledClasses, saveClassCancellation } = useClassCancellations();
+  const [editingCancellation, setEditingCancellation] = useState<any>(null);
+  const [editingCancellationDayOrder, setEditingCancellationDayOrder] = useState(1);
   const [showExtra, setShowExtra] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [view, setView] = useState<"full" | "default">("default");
@@ -191,6 +210,20 @@ export default function DesktopTimetable() {
   }, [scheduleData, courseMap]);
 
   const displayTimings = showExtra ? [...timeSlots, ...extraTimeSlots] : timeSlots;
+  const cancellationDayOrders = useMemo(() => {
+    if (!editingCancellation) return [];
+    const key = getClassCancellationKey(editingCancellation);
+    return days.filter((day) =>
+      Object.values(gridData[day] || {}).some(
+        (slot: any) => slot && getClassCancellationKey(slot) === key,
+      ),
+    );
+  }, [days, gridData, editingCancellation]);
+
+  const openCancellation = (slot: any, dayOrder: number) => {
+    setEditingCancellation(slot);
+    setEditingCancellationDayOrder(dayOrder);
+  };
 
   const currentDayOrder = useMemo(() => {
     const todayDate = new Date().toLocaleDateString("en-GB", {
@@ -262,13 +295,14 @@ export default function DesktopTimetable() {
     const todaySlots = gridData[currentDayOrder];
     if (!todaySlots) return true;
     let lastEnd = 0;
-    Object.keys(todaySlots).forEach(time => {
+    Object.entries(todaySlots).forEach(([time, slot]) => {
+      if (!slot || isClassCancelled(cancelledClasses, slot, currentDayOrder, now)) return;
       const end = parseTimetableTime(time.split("-")[1]?.trim() || "");
       if (end > lastEnd) lastEnd = end;
     });
     
     return currentMinutes >= lastEnd;
-  }, [isHoliday, currentDayOrder, gridData]);
+  }, [isHoliday, currentDayOrder, gridData, cancelledClasses]);
 
   const [selectedDay, setSelectedDay] = useState(1);
   const [previewTime, setPreviewTime] = useState<string | null>(null);
@@ -293,11 +327,13 @@ export default function DesktopTimetable() {
       const parts = time.split("-");
       const start = parseTimetableTime(parts[0].trim());
       const end = parseTimetableTime(parts[1]?.trim() || "");
-      return currentMinutes >= start && currentMinutes <= end;
+      const slot = gridData[selectedDay][time];
+      const isCancelled = slot && isClassCancelled(cancelledClasses, slot, selectedDay, now);
+      return !!slot && !isCancelled && currentMinutes >= start && currentMinutes <= end;
     });
 
     return ongoing || null;
-  }, [previewTime, displayTimings, selectedDay, currentDayOrder, isHoliday, isTodayFinished]);
+  }, [previewTime, displayTimings, selectedDay, currentDayOrder, isHoliday, isTodayFinished, gridData, cancelledClasses]);
 
   const activeHeroSlot = activeHeroTime ? gridData[selectedDay][activeHeroTime] : null;
 
@@ -315,7 +351,10 @@ export default function DesktopTimetable() {
         const start = parseTimetableTime(parts[0].trim());
         return { time, start };
       })
-      .filter(t => t.start > (isActuallyCurrentDay ? currentMinutes : 0))
+      .filter(t => {
+        const slot = gridData[selectedDay][t.time];
+        return !!slot && !isClassCancelled(cancelledClasses, slot, selectedDay, selectedDay === currentDayOrder && !isHoliday ? now : null) && t.start > (isActuallyCurrentDay ? currentMinutes : 0);
+      })
       .sort((a, b) => a.start - b.start)[0];
       
     if (upcoming) {
@@ -323,7 +362,7 @@ export default function DesktopTimetable() {
     }
     
     return null;
-  }, [activeHeroSlot, displayTimings, gridData, selectedDay, currentDayOrder, isHoliday, isTodayFinished]);
+  }, [activeHeroSlot, displayTimings, gridData, selectedDay, currentDayOrder, isHoliday, isTodayFinished, cancelledClasses]);
 
   const isActuallyToday = selectedDay === currentDayOrder && !isHoliday && !isTodayFinished;
   const isActuallyUpcoming = (isHoliday || isTodayFinished) && selectedDay === nextWorkingDayOrder;
@@ -377,11 +416,15 @@ export default function DesktopTimetable() {
                         <span className="absolute bottom-1.5 text-[6px] font-black uppercase tracking-widest text-theme-bg/60" style={{ fontFamily: 'var(--font-montserrat)' }}>today</span>
                       )}
                     </div>
-                    {displayTimings.map(time => (
-                      <div key={`${day}-${time}`} className="relative h-full">
-                        <CompactSlot slot={gridData[day][time]} />
-                      </div>
-                    ))}
+                    {displayTimings.map(time => {
+                      const slot = gridData[day][time];
+                      const isCancelled = !!slot && isClassCancelled(cancelledClasses, slot, day, day === currentDayOrder && !isHoliday ? new Date() : null);
+                      return (
+                        <div key={`${day}-${time}`} className="relative h-full">
+                          <CompactSlot slot={slot} isCancelled={isCancelled} onEditCancellation={() => openCancellation(slot, day)} />
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
@@ -471,15 +514,19 @@ export default function DesktopTimetable() {
 
                 <div className="px-10">
                   <div className="h-[100px] bg-theme-emphasis/5 rounded-[28px] flex items-center px-4 gap-2">
-                    {displayTimings.map(time => (
-                      <TimelineCard 
-                        key={time} 
-                        time={time} 
-                        slot={gridData[selectedDay][time]} 
+                    {displayTimings.map(time => {
+                      const slot = gridData[selectedDay][time];
+                      const isCancelled = !!slot && isClassCancelled(cancelledClasses, slot, selectedDay, selectedDay === currentDayOrder && !isHoliday ? new Date() : null);
+                      return <TimelineCard
+                        key={time}
+                        time={time}
+                        slot={slot}
                         active={activeHeroTime === time}
+                        isCancelled={isCancelled}
                         onClick={() => setPreviewTime(time)}
-                      />
-                    ))}
+                        onEditCancellation={() => openCancellation(slot, selectedDay)}
+                      />;
+                    })}
                   </div>
                 </div>
               </div>
@@ -537,7 +584,17 @@ export default function DesktopTimetable() {
         isOpen={showPreviewModal}
         onClose={() => setShowPreviewModal(false)}
       />
+      <ClassCancellationDialog
+        slot={editingCancellation}
+        dayOrder={editingCancellationDayOrder}
+        allowedDayOrders={cancellationDayOrders}
+        cancellation={editingCancellation ? getClassCancellationRule(cancelledClasses, editingCancellation) : EMPTY_CANCELLATION_RULE}
+        onClose={() => setEditingCancellation(null)}
+        onSave={(rule) => {
+          saveClassCancellation(editingCancellation, rule);
+          setEditingCancellation(null);
+        }}
+      />
     </div>
   );
 }
-
