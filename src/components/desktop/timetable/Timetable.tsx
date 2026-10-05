@@ -514,13 +514,14 @@ export default function DesktopTimetable() {
                       const slot = gridData[selectedDay][time];
                       const isCancelled = !!slot && isClassCancelled(cancelledClasses, slot, selectedDay);
                       return (
-                        <div key={time} className={`relative flex flex-1 min-w-0 h-full ${isCancelled ? "opacity-60 grayscale" : ""}`}>
+                        <div key={time} className={`relative flex flex-1 min-w-0 h-full ${isCancelled ? "opacity-60 grayscale [&_h4]:line-through" : ""}`}>
                           <TimelineCard
                             time={time}
                             slot={slot}
                             active={activeHeroTime === time}
                             onClick={() => setPreviewTime(time)}
                           />
+                          {isCancelled && <span className="pointer-events-none absolute bottom-[22px] left-3 z-10 text-[7px] font-bold uppercase text-theme-muted">cancelled</span>}
                           {slot && (
                             <button type="button" title={isCancelled ? "Edit cancellation" : "Cancel class"} aria-label={isCancelled ? "Edit cancellation" : "Cancel class"} onClick={() => openCancellation(slot, selectedDay)} className="absolute top-1 right-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-theme-bg/80 text-theme-muted">
                               <X size={12} strokeWidth={2.5} />
