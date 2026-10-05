@@ -4,12 +4,35 @@ from utils.text import TextUtils
 
 class PortalTimetableService:
     @staticmethod
+    def _slot_period_count(slot):
+        return len([part for part in slot.split(",") if part.strip()])
+
+    @staticmethod
+    def _match_course_variant(variants, period_count):
+        if not variants:
+            return None
+        exact_matches = [
+            course for course in variants
+            if PortalTimetableService._slot_period_count(course["slot"]) == period_count
+        ]
+        if len(exact_matches) == 1:
+            return exact_matches[0]
+        return min(
+            variants,
+            key=lambda course: (
+                abs(PortalTimetableService._slot_period_count(course["slot"]) - period_count),
+                course["type"] == "Practical",
+            ),
+        )
+
+    @staticmethod
     def parse(html_content):
         if not html_content:
             return {}, {}
         
         parser = HTMLParser(html_content)
         courses_map = {}
+        course_variants = {}
         
         for table in parser.css("table"):
             headers = [TextUtils.clean(th.text(strip=True)).lower() for th in table.css("th")]
@@ -47,10 +70,10 @@ class PortalTimetableService:
                         else:
                             full_room = "TBA"
                         
+                        slots = [slot.strip().upper() for slot in c_slot.split(",") if slot.strip()]
                         is_lab = (
-                            c_code.endswith('L') or c_code.endswith('P') or 
-                            "lab" in c_name.lower() or "practical" in c_name.lower() or
-                            any(s.strip().upper().startswith('P') for s in c_slot.split(','))
+                            re.search(r"\b(lab|practical)\b", c_name, flags=re.I) is not None
+                            or any(slot.startswith(("P", "L")) for slot in slots)
                         )
                         
                         course_info = {
@@ -68,8 +91,9 @@ class PortalTimetableService:
                             "raw_type": "Practical" if is_lab else "Theory"
                         }
                         
+                        course_variants.setdefault(c_code, []).append(course_info)
                         if c_code not in courses_map:
-                            courses_map[c_code] = course_info
+                            courses_map[c_code] = course_info.copy()
                         else:
                             existing = courses_map[c_code]
                             if c_slot and c_slot not in existing["slot"]:
@@ -114,15 +138,27 @@ class PortalTimetableService:
                 day_name = f"Day {day_match.group(1)}"
                 schedule[day_name] = {}
                 
-                for i, td in enumerate(tds[1:]):
+                cells = tds[1:]
+                cell_codes = [TextUtils.clean(td.text(strip=True)) for td in cells]
+                for i, code in enumerate(cell_codes):
                     if i >= len(time_headers):
                         break
                     time_slot = time_headers[i]
-                    raw_val = TextUtils.clean(td.text(strip=True))
+                    raw_val = code
                     if not raw_val or raw_val in ["-", "--", ""]:
                         continue
                     code = raw_val.strip()
-                    details = courses_map.get(code, {
+                    # The portal repeats a course code for each hour, so this span selects its slot row.
+                    start = i
+                    while start > 0 and cell_codes[start - 1] == code:
+                        start -= 1
+                    end = i + 1
+                    while end < len(cell_codes) and cell_codes[end] == code:
+                        end += 1
+                    period_count = end - start
+                    details = PortalTimetableService._match_course_variant(
+                        course_variants.get(code, []), period_count
+                    ) or courses_map.get(code, {
                         "code": code,
                         "name": code,
                         "title": code,
