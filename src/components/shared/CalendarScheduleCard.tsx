@@ -55,9 +55,10 @@ export default function CalendarScheduleCard({
               {item.time}
             </span>
             <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold">
-                {item.name}
-              </p>
+                <p className={`truncate text-sm font-bold ${item.cancelled ? "line-through opacity-60" : ""}`}>
+                  {item.name}
+                </p>
+              {item.cancelled && <p className="text-[10px] font-bold uppercase opacity-60">cancelled</p>}
               <p className={`mt-0.5 flex items-center gap-1 text-[10px] font-semibold ${isBrutalist ? "text-black/45" : "text-theme-muted"}`}>
                 <><MapPin size={10} /> {item.room}</>
                 {item.slot ? ` · ${item.slot}` : ""}

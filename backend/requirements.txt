@@ -6,4 +6,4 @@ lxml
 pydantic
 python-dotenv
 slowapi
-selectolax
+selectolax<1.0

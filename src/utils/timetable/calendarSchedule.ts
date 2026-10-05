@@ -1,3 +1,6 @@
+import { isClassCancelled } from "@/utils/timetable/classCancellations";
+import type { ClassCancellationMap } from "@/utils/timetable/classCancellations";
+
 export interface CalendarScheduleItem {
   id: string;
   name: string;
@@ -5,6 +8,7 @@ export interface CalendarScheduleItem {
   slot: string;
   type: string;
   time: string;
+  cancelled: boolean;
 }
 
 const timeToMinutes = (value: string) => {
@@ -19,6 +23,8 @@ const timeToMinutes = (value: string) => {
 export const getCalendarScheduleItems = (
   schedule: any,
   rawDayOrder: number | string | undefined,
+  cancellations: ClassCancellationMap = {},
+  calendarDate?: Date,
 ): CalendarScheduleItem[] => {
   const dayOrder = Number.parseInt(String(rawDayOrder || ""), 10);
   if (!Number.isInteger(dayOrder) || dayOrder < 1 || dayOrder > 5) return [];
@@ -40,6 +46,7 @@ export const getCalendarScheduleItems = (
         room: rawSlot.room || "TBA",
         slot: rawSlot.slot || "",
         type: rawSlot.type || "theory",
+        cancelled: isClassCancelled(cancellations, rawSlot, dayOrder, calendarDate, timeRange),
       };
     })
     .sort((a, b) => (a.startMinutes ?? 0) - (b.startMinutes ?? 0));
@@ -56,6 +63,7 @@ export const getCalendarScheduleItems = (
       previous.courseKey === row.key &&
       previous.room === row.room &&
       previous.slot === row.slot &&
+      previous.cancelled === row.cancelled &&
       previous.endMinutes !== null &&
       previous.endMinutes === row.startMinutes
     ) {
@@ -70,6 +78,7 @@ export const getCalendarScheduleItems = (
       room: row.room,
       slot: row.slot,
       type: row.type,
+      cancelled: row.cancelled,
       time: `${row.start} - ${row.end}`,
       courseKey: row.key,
       endMinutes: row.endMinutes,

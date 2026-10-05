@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Target, Calendar } from "lucide-react";
 import { useCalendarData } from "@/hooks/useCalendarData";
 import CalendarScheduleCard from "@/components/shared/CalendarScheduleCard";
 import { getCalendarScheduleItems } from "@/utils/timetable/calendarSchedule";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
 import calendarDataJson from "@/data/calendar_data.json";
 
 const CalendarDay = memo(
@@ -88,6 +89,7 @@ const CalendarDay = memo(
 CalendarDay.displayName = "CalendarDay";
 
 const CalendarPage = ({ calendarData, academia, data }: any) => {
+  const { cancelledClasses } = useClassCancellations();
   const [showScheduleCard, setShowScheduleCard] = useState(false);
   const [lastCalendarTap, setLastCalendarTap] = useState("");
   const router = useRouter();
@@ -123,8 +125,8 @@ const CalendarPage = ({ calendarData, academia, data }: any) => {
 
   const schedule = academia?.effectiveSchedule || data?.effectiveSchedule || data?.schedule || data?.timetable || data?.time_table || {};
   const scheduleItems = useMemo(
-    () => getCalendarScheduleItems(schedule, currentEvent?.dayOrder || currentEvent?.order),
-    [schedule, currentEvent],
+    () => getCalendarScheduleItems(schedule, currentEvent?.dayOrder || currentEvent?.order, cancelledClasses, selectedDate),
+    [schedule, currentEvent, cancelledClasses, selectedDate],
   );
   const handleCalendarDateClick = (date: Date) => {
     const dateKey = date.toDateString();

@@ -459,7 +459,7 @@ export default function Timetable({
                     );
                   }
 
-                  const isCancelled = isClassCancelled(cancelledClasses, item, activeDay);
+                  const isCancelled = isClassCancelled(cancelledClasses, item, activeDay, isViewingToday ? new Date() : null);
                   const isLab = item.type === "lab";
                   const isActuallyCurrent = item.isCurrent && isViewingToday && !isCancelled;
 

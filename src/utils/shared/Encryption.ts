@@ -142,6 +142,7 @@ export const EncryptionUtils = {
       "ratiod_theme",
       "ratio_private_notes",
       "ratio_custom_classes",
+      "ratio_cancelled_classes",
       "ratiod_onboarded",
       "ratio_update_history",
       "ratio_seen_version",

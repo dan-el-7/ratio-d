@@ -11,6 +11,7 @@ import {
 import { useCalendarData } from "@/hooks/useCalendarData";
 import CalendarScheduleCard from "@/components/shared/CalendarScheduleCard";
 import { getCalendarScheduleItems } from "@/utils/timetable/calendarSchedule";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
 import { Haptics } from "@/utils/shared/haptics";
 
 const BEZIER = [0.34, 0.15, 0.16, 0.96] as const;
@@ -124,6 +125,7 @@ const CalendarDay = memo(
 CalendarDay.displayName = "CalendarDay";
 
 const Calendar = ({ data, academia }: any) => {
+  const { cancelledClasses } = useClassCancellations();
   const [mounted, setMounted] = useState(false);
   const [showScheduleCard, setShowScheduleCard] = useState(false);
   const [lastCalendarTap, setLastCalendarTap] = useState("");
@@ -156,8 +158,8 @@ const Calendar = ({ data, academia }: any) => {
 
   const schedule = academia?.effectiveSchedule || data?.effectiveSchedule || data?.schedule || data?.timetable || data?.time_table || {};
   const scheduleItems = useMemo(
-    () => getCalendarScheduleItems(schedule, currentEvent?.dayOrder || currentEvent?.order),
-    [schedule, currentEvent],
+    () => getCalendarScheduleItems(schedule, currentEvent?.dayOrder || currentEvent?.order, cancelledClasses, selectedDate),
+    [schedule, currentEvent, cancelledClasses, selectedDate],
   );
 
   const handleCalendarDateClick = (date: Date) => {

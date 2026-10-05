@@ -296,7 +296,7 @@ export default function DesktopTimetable() {
     if (!todaySlots) return true;
     let lastEnd = 0;
     Object.entries(todaySlots).forEach(([time, slot]) => {
-      if (!slot || isClassCancelled(cancelledClasses, slot, currentDayOrder)) return;
+      if (!slot || isClassCancelled(cancelledClasses, slot, currentDayOrder, now)) return;
       const end = parseTimetableTime(time.split("-")[1]?.trim() || "");
       if (end > lastEnd) lastEnd = end;
     });
@@ -328,7 +328,7 @@ export default function DesktopTimetable() {
       const start = parseTimetableTime(parts[0].trim());
       const end = parseTimetableTime(parts[1]?.trim() || "");
       const slot = gridData[selectedDay][time];
-      const isCancelled = slot && isClassCancelled(cancelledClasses, slot, selectedDay);
+      const isCancelled = slot && isClassCancelled(cancelledClasses, slot, selectedDay, now);
       return !!slot && !isCancelled && currentMinutes >= start && currentMinutes <= end;
     });
 
@@ -353,7 +353,7 @@ export default function DesktopTimetable() {
       })
       .filter(t => {
         const slot = gridData[selectedDay][t.time];
-        return !!slot && !isClassCancelled(cancelledClasses, slot, selectedDay) && t.start > (isActuallyCurrentDay ? currentMinutes : 0);
+        return !!slot && !isClassCancelled(cancelledClasses, slot, selectedDay, selectedDay === currentDayOrder && !isHoliday ? now : null) && t.start > (isActuallyCurrentDay ? currentMinutes : 0);
       })
       .sort((a, b) => a.start - b.start)[0];
       
@@ -418,7 +418,7 @@ export default function DesktopTimetable() {
                     </div>
                     {displayTimings.map(time => {
                       const slot = gridData[day][time];
-                      const isCancelled = !!slot && isClassCancelled(cancelledClasses, slot, day);
+                      const isCancelled = !!slot && isClassCancelled(cancelledClasses, slot, day, day === currentDayOrder && !isHoliday ? new Date() : null);
                       return (
                         <div key={`${day}-${time}`} className="relative h-full">
                           <CompactSlot slot={slot} isCancelled={isCancelled} onEditCancellation={() => openCancellation(slot, day)} />
@@ -516,7 +516,7 @@ export default function DesktopTimetable() {
                   <div className="h-[100px] bg-theme-emphasis/5 rounded-[28px] flex items-center px-4 gap-2">
                     {displayTimings.map(time => {
                       const slot = gridData[selectedDay][time];
-                      const isCancelled = !!slot && isClassCancelled(cancelledClasses, slot, selectedDay);
+                      const isCancelled = !!slot && isClassCancelled(cancelledClasses, slot, selectedDay, selectedDay === currentDayOrder && !isHoliday ? new Date() : null);
                       return <TimelineCard
                         key={time}
                         time={time}

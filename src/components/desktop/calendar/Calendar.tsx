@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { getCalendarGrid, getCalendarDisplay } from "@/utils/dashboard/calendarLogic";
 import { getCalendarScheduleItems } from "@/utils/timetable/calendarSchedule";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
 import calendarDataJson from "@/data/calendar_data.json";
 import { CalendarEvent, CalendarSlot } from "@/types";
 import { Haptics } from "@/utils/shared/haptics";
@@ -85,6 +86,7 @@ const DayCell = ({ slot, onClick }: { slot: CalendarSlot & { event?: CalendarEve
 
 export default function DesktopCalendar() {
   const { userData } = useApp();
+  const { cancelledClasses } = useClassCancellations();
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -115,8 +117,8 @@ export default function DesktopCalendar() {
   const selectedEvent = calendarData[selectedDate.toDateString()];
   const schedule = userData?.effectiveSchedule || userData?.timetable || userData?.schedule || userData?.time_table || {};
   const scheduleItems = useMemo(
-    () => getCalendarScheduleItems(schedule, selectedEvent?.dayOrder || selectedEvent?.order),
-    [schedule, selectedEvent],
+    () => getCalendarScheduleItems(schedule, selectedEvent?.dayOrder || selectedEvent?.order, cancelledClasses, selectedDate),
+    [schedule, selectedEvent, cancelledClasses, selectedDate],
   );
 
   const dayOrderString = useMemo(() => {
@@ -131,14 +133,7 @@ export default function DesktopCalendar() {
     const items: { title: string, content: string }[] = [];
     const fullDesc = selectedEvent?.description || "";
 
-    if (scheduleItems.length > 0) {
-      return scheduleItems.map((item) => ({
-        title: item.time,
-        content: `${item.name} · ${item.room}${item.slot ? ` · ${item.slot}` : ""}`,
-      }));
-    }
-    
-    if (!fullDesc) {
+    if (!fullDesc && scheduleItems.length === 0) {
       const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
       if (isWeekend) {
         items.push({ title: "weekend", content: "chill out. nothing to see here." });
@@ -158,6 +153,13 @@ export default function DesktopCalendar() {
       } else {
         items.push({ title: seg, content: "scheduled event" });
       }
+    });
+
+    scheduleItems.forEach((item) => {
+      items.push({
+        title: item.time,
+        content: `${item.name} · ${item.room}${item.slot ? ` · ${item.slot}` : ""}${item.cancelled ? " · cancelled" : ""}`,
+      });
     });
 
     return items;

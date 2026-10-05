@@ -318,7 +318,7 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
                     );
                   }
 
-                  const isCancelled = isClassCancelled(cancelledClasses, item, activeDayOrder);
+                  const isCancelled = isClassCancelled(cancelledClasses, item, activeDayOrder, Number(dayOrder) === activeDayOrder ? new Date() : null);
 
                   return (
                     <motion.div
