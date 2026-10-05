@@ -162,12 +162,17 @@ const Calendar = ({ data, academia }: any) => {
 
   const handleCalendarDateClick = (date: Date) => {
     const dateKey = date.toDateString();
-    if (lastCalendarTap === dateKey) setShowScheduleCard(true);
+    if (lastCalendarTap === dateKey && selectedDate.toDateString() === dateKey) setShowScheduleCard(true);
     else {
       setLastCalendarTap(dateKey);
       setShowScheduleCard(false);
     }
     handleDateClick(date);
+  };
+
+  const resetCalendarTap = () => {
+    setLastCalendarTap("");
+    setShowScheduleCard(false);
   };
 
   useEffect(() => {
@@ -262,6 +267,7 @@ const Calendar = ({ data, academia }: any) => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
+                    resetCalendarTap();
                     Haptics.light();
                     handlePrevMonth();
                   }}
@@ -271,6 +277,7 @@ const Calendar = ({ data, academia }: any) => {
                 </button>
                 <button
                   onClick={() => {
+                    resetCalendarTap();
                     Haptics.light();
                     goToToday();
                   }}
@@ -280,6 +287,7 @@ const Calendar = ({ data, academia }: any) => {
                 </button>
                 <button
                   onClick={() => {
+                    resetCalendarTap();
                     Haptics.light();
                     handleNextMonth();
                   }}

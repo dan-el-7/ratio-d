@@ -128,12 +128,17 @@ const CalendarPage = ({ calendarData, academia, data }: any) => {
   );
   const handleCalendarDateClick = (date: Date) => {
     const dateKey = date.toDateString();
-    if (lastCalendarTap === dateKey) setShowScheduleCard(true);
+    if (lastCalendarTap === dateKey && selectedDate.toDateString() === dateKey) setShowScheduleCard(true);
     else {
       setLastCalendarTap(dateKey);
       setShowScheduleCard(false);
     }
     handleDateClick(date);
+  };
+
+  const resetCalendarTap = () => {
+    setLastCalendarTap("");
+    setShowScheduleCard(false);
   };
 
   const brutalistTheme = useMemo(() => {
@@ -215,20 +220,20 @@ const CalendarPage = ({ calendarData, academia, data }: any) => {
             {monthTitle}
           </div>
           <button
-            onClick={handlePrevMonth}
+            onClick={() => { resetCalendarTap(); handlePrevMonth(); }}
             className="p-2 hover:bg-black/5 rounded-full transition-colors text-[#050505] z-10"
           >
             <ChevronLeft size={24} />
           </button>
           <div className="flex items-center gap-1 z-10">
             <button
-              onClick={handleNextMonth}
+              onClick={() => { resetCalendarTap(); handleNextMonth(); }}
               className="p-2 hover:bg-black/5 rounded-full transition-colors text-[#050505]"
             >
               <ChevronRight size={24} />
             </button>
             <button
-              onClick={goToToday}
+              onClick={() => { resetCalendarTap(); goToToday(); }}
               className="p-2 hover:bg-black/5 rounded-full transition-colors text-[#050505] opacity-60 hover:opacity-100"
             >
               <Target size={20} />
