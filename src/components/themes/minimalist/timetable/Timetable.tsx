@@ -25,7 +25,13 @@ import CustomClass from "./CustomClass";
 import { AcademiaData } from "@/types";
 import TimetablePreviewModal from "@/components/shared/TimetablePreviewModal";
 import ClassCancellationDialog from "@/components/shared/ClassCancellationDialog";
-import { getClassCancellationKey, NO_CANCELLED_DAYS, useClassCancellations } from "@/hooks/useClassCancellations";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
+import {
+  EMPTY_CANCELLATION_RULE,
+  getClassCancellationKey,
+  getClassCancellationRule,
+  isClassCancelled,
+} from "@/utils/timetable/classCancellations";
 
 const BEZIER = [0.34, 0.15, 0.16, 0.96] as const;
 
@@ -130,7 +136,7 @@ export default function Timetable({
 
   const [customClasses, setCustomClasses] = useState<Record<number, any[]>>({});
   const [editingCancellation, setEditingCancellation] = useState<any>(null);
-  const { cancelledClasses, saveCancelledDays } = useClassCancellations();
+  const { cancelledClasses, saveClassCancellation } = useClassCancellations();
 
   const nextWorkingDayOrder = useMemo(() => {
     const calData = academia?.calendarData || calendarDataJson || [];
@@ -164,9 +170,7 @@ export default function Timetable({
       !initialSet.current &&
       (Object.keys(schedule).length > 0 || isHoliday)
     ) {
-      setActiveDay(
-        getInitialActiveDay(schedule, isHoliday, dayOrder, nextWorkingDayOrder),
-      );
+      setActiveDay(getInitialActiveDay(schedule, isHoliday, dayOrder, nextWorkingDayOrder));
       initialSet.current = true;
     }
 
@@ -222,6 +226,16 @@ export default function Timetable({
       courseMap,
     );
   }, [schedule, customClasses, activeDay, dayOrder, courseMap]);
+
+  const cancellationDayOrders = useMemo(() => {
+    if (!editingCancellation) return [];
+    const key = getClassCancellationKey(editingCancellation);
+    return [1, 2, 3, 4, 5].filter((order) =>
+      processSchedule(schedule, customClasses, order, dayOrder, courseMap).some(
+        (item) => item.type !== "break" && getClassCancellationKey(item) === key,
+      ),
+    );
+  }, [schedule, customClasses, dayOrder, courseMap, editingCancellation]);
 
   const isViewingToday = String(activeDay) === String(dayOrder) && !isHoliday;
   const nextScheduledDay = isHoliday
@@ -445,8 +459,7 @@ export default function Timetable({
                     );
                   }
 
-                  const cancelledDays = cancelledClasses[getClassCancellationKey(item)] || NO_CANCELLED_DAYS;
-                  const isCancelled = cancelledDays.includes(activeDay);
+                  const isCancelled = isClassCancelled(cancelledClasses, item, activeDay);
                   const isLab = item.type === "lab";
                   const isActuallyCurrent = item.isCurrent && isViewingToday && !isCancelled;
 
@@ -486,10 +499,12 @@ export default function Timetable({
                       >
                         <button
                           onClick={() => setEditingCancellation(item)}
-                          aria-label={isCancelled ? "Edit cancelled days" : "Mark class cancelled"}
-                          className="absolute top-3 right-3 rounded-full bg-theme-surface px-2.5 py-1 text-[9px] font-bold uppercase text-theme-muted hover:text-theme-text z-20"
+                          type="button"
+                          title={isCancelled ? "Edit cancellation" : "Cancel class"}
+                          aria-label={isCancelled ? "Edit cancellation" : "Cancel class"}
+                          className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-theme-surface text-theme-muted hover:text-theme-text"
                         >
-                          {isCancelled ? "edit" : "cancel"}
+                          <X size={16} strokeWidth={2.5} />
                         </button>
                         {item.isCustom && (
                           <button
@@ -678,10 +693,12 @@ export default function Timetable({
 
       <ClassCancellationDialog
         slot={editingCancellation}
-        cancelledDays={editingCancellation ? cancelledClasses[getClassCancellationKey(editingCancellation)] || NO_CANCELLED_DAYS : NO_CANCELLED_DAYS}
+        dayOrder={activeDay}
+        allowedDayOrders={cancellationDayOrders}
+        cancellation={editingCancellation ? getClassCancellationRule(cancelledClasses, editingCancellation) : EMPTY_CANCELLATION_RULE}
         onClose={() => setEditingCancellation(null)}
-        onSave={(days) => {
-          saveCancelledDays(editingCancellation, days);
+        onSave={(rule) => {
+          saveClassCancellation(editingCancellation, rule);
           setEditingCancellation(null);
         }}
       />

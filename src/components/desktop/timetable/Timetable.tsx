@@ -3,11 +3,17 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/context/AppContext";
 import { buildCourseMap, processSchedule, parseTimetableTime } from "@/utils/dashboard/timetableLogic";
-import { Clock, Plus, ChevronRight, LayoutGrid, List, MapPin, Coffee, Zap, Download, RotateCcw } from "lucide-react";
+import { Clock, Plus, ChevronRight, LayoutGrid, List, MapPin, Coffee, Zap, Download, RotateCcw, X } from "lucide-react";
 import { toPng } from 'html-to-image';
 import TimetablePreviewModal from "@/components/shared/TimetablePreviewModal";
 import ClassCancellationDialog from "@/components/shared/ClassCancellationDialog";
-import { getClassCancellationKey, NO_CANCELLED_DAYS, useClassCancellations } from "@/hooks/useClassCancellations";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
+import {
+  EMPTY_CANCELLATION_RULE,
+  getClassCancellationKey,
+  getClassCancellationRule,
+  isClassCancelled,
+} from "@/utils/timetable/classCancellations";
 
 const CompactSlot = ({ slot, isCancelled, onEditCancellation }: { slot: any; isCancelled: boolean; onEditCancellation: () => void }) => {
   if (!slot) {
@@ -34,8 +40,8 @@ const CompactSlot = ({ slot, isCancelled, onEditCancellation }: { slot: any; isC
           : "bg-theme-card border-theme-border shadow-sm hover:border-theme-text/20"
       }`}
     >
-      <button type="button" title={isCancelled ? "Edit cancelled days" : "Mark class cancelled"} onClick={onEditCancellation} className="absolute top-1 right-1 z-10 rounded bg-theme-bg/80 px-1 text-[6px] font-bold uppercase text-theme-muted">
-        {isCancelled ? "edit" : "cancel"}
+      <button type="button" title={isCancelled ? "Edit cancellation" : "Cancel class"} aria-label={isCancelled ? "Edit cancellation" : "Cancel class"} onClick={onEditCancellation} className="absolute top-1 right-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-theme-bg/80 text-theme-muted">
+        <X size={12} strokeWidth={2.5} />
       </button>
       <div className="flex flex-col gap-0.5">
         <h3 
@@ -90,8 +96,8 @@ const TimelineCard = ({ slot, time, active, isCancelled, onClick, onEditCancella
             : "bg-theme-card border-theme-border text-theme-text hover:border-theme-text/20"
       }`}
     >
-      <button type="button" title={isCancelled ? "Edit cancelled days" : "Mark class cancelled"} onClick={(event) => { event.stopPropagation(); onEditCancellation(); }} className="absolute top-1 right-1 z-10 rounded bg-theme-bg/80 px-1 text-[7px] font-bold uppercase text-theme-muted">
-        {isCancelled ? "edit" : "cancel"}
+      <button type="button" title={isCancelled ? "Edit cancellation" : "Cancel class"} aria-label={isCancelled ? "Edit cancellation" : "Cancel class"} onClick={(event) => { event.stopPropagation(); onEditCancellation(); }} className="absolute top-1 right-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-theme-bg/80 text-theme-muted">
+        <X size={12} strokeWidth={2.5} />
       </button>
       <div className="flex flex-col">
         <span className={`text-[13px] font-black uppercase tracking-tighter leading-none mb-1`} style={{ fontFamily: 'var(--font-montserrat)' }}>
@@ -114,8 +120,9 @@ const TimelineCard = ({ slot, time, active, isCancelled, onClick, onEditCancella
 
 export default function DesktopTimetable() {
   const { userData, calendarData } = useApp();
-  const { cancelledClasses, saveCancelledDays } = useClassCancellations();
+  const { cancelledClasses, saveClassCancellation } = useClassCancellations();
   const [editingCancellation, setEditingCancellation] = useState<any>(null);
+  const [editingCancellationDayOrder, setEditingCancellationDayOrder] = useState(1);
   const [showExtra, setShowExtra] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [view, setView] = useState<"full" | "default">("default");
@@ -203,6 +210,20 @@ export default function DesktopTimetable() {
   }, [scheduleData, courseMap]);
 
   const displayTimings = showExtra ? [...timeSlots, ...extraTimeSlots] : timeSlots;
+  const cancellationDayOrders = useMemo(() => {
+    if (!editingCancellation) return [];
+    const key = getClassCancellationKey(editingCancellation);
+    return days.filter((day) =>
+      Object.values(gridData[day] || {}).some(
+        (slot: any) => slot && getClassCancellationKey(slot) === key,
+      ),
+    );
+  }, [days, gridData, editingCancellation]);
+
+  const openCancellation = (slot: any, dayOrder: number) => {
+    setEditingCancellation(slot);
+    setEditingCancellationDayOrder(dayOrder);
+  };
 
   const currentDayOrder = useMemo(() => {
     const todayDate = new Date().toLocaleDateString("en-GB", {
@@ -275,7 +296,7 @@ export default function DesktopTimetable() {
     if (!todaySlots) return true;
     let lastEnd = 0;
     Object.entries(todaySlots).forEach(([time, slot]) => {
-      if (!slot || (cancelledClasses[getClassCancellationKey(slot)] || []).includes(currentDayOrder)) return;
+      if (!slot || isClassCancelled(cancelledClasses, slot, currentDayOrder)) return;
       const end = parseTimetableTime(time.split("-")[1]?.trim() || "");
       if (end > lastEnd) lastEnd = end;
     });
@@ -307,7 +328,7 @@ export default function DesktopTimetable() {
       const start = parseTimetableTime(parts[0].trim());
       const end = parseTimetableTime(parts[1]?.trim() || "");
       const slot = gridData[selectedDay][time];
-      const isCancelled = slot && (cancelledClasses[getClassCancellationKey(slot)] || []).includes(selectedDay);
+      const isCancelled = slot && isClassCancelled(cancelledClasses, slot, selectedDay);
       return !!slot && !isCancelled && currentMinutes >= start && currentMinutes <= end;
     });
 
@@ -332,7 +353,7 @@ export default function DesktopTimetable() {
       })
       .filter(t => {
         const slot = gridData[selectedDay][t.time];
-        return !!slot && !(cancelledClasses[getClassCancellationKey(slot)] || []).includes(selectedDay) && t.start > (isActuallyCurrentDay ? currentMinutes : 0);
+        return !!slot && !isClassCancelled(cancelledClasses, slot, selectedDay) && t.start > (isActuallyCurrentDay ? currentMinutes : 0);
       })
       .sort((a, b) => a.start - b.start)[0];
       
@@ -397,10 +418,10 @@ export default function DesktopTimetable() {
                     </div>
                     {displayTimings.map(time => {
                       const slot = gridData[day][time];
-                      const isCancelled = !!slot && (cancelledClasses[getClassCancellationKey(slot)] || []).includes(day);
+                      const isCancelled = !!slot && isClassCancelled(cancelledClasses, slot, day);
                       return (
                         <div key={`${day}-${time}`} className="relative h-full">
-                          <CompactSlot slot={slot} isCancelled={isCancelled} onEditCancellation={() => setEditingCancellation(slot)} />
+                          <CompactSlot slot={slot} isCancelled={isCancelled} onEditCancellation={() => openCancellation(slot, day)} />
                         </div>
                       );
                     })}
@@ -495,7 +516,7 @@ export default function DesktopTimetable() {
                   <div className="h-[100px] bg-theme-emphasis/5 rounded-[28px] flex items-center px-4 gap-2">
                     {displayTimings.map(time => {
                       const slot = gridData[selectedDay][time];
-                      const isCancelled = !!slot && (cancelledClasses[getClassCancellationKey(slot)] || []).includes(selectedDay);
+                      const isCancelled = !!slot && isClassCancelled(cancelledClasses, slot, selectedDay);
                       return <TimelineCard
                         key={time}
                         time={time}
@@ -503,7 +524,7 @@ export default function DesktopTimetable() {
                         active={activeHeroTime === time}
                         isCancelled={isCancelled}
                         onClick={() => setPreviewTime(time)}
-                        onEditCancellation={() => setEditingCancellation(slot)}
+                        onEditCancellation={() => openCancellation(slot, selectedDay)}
                       />;
                     })}
                   </div>
@@ -565,14 +586,15 @@ export default function DesktopTimetable() {
       />
       <ClassCancellationDialog
         slot={editingCancellation}
-        cancelledDays={editingCancellation ? cancelledClasses[getClassCancellationKey(editingCancellation)] || NO_CANCELLED_DAYS : NO_CANCELLED_DAYS}
+        dayOrder={editingCancellationDayOrder}
+        allowedDayOrders={cancellationDayOrders}
+        cancellation={editingCancellation ? getClassCancellationRule(cancelledClasses, editingCancellation) : EMPTY_CANCELLATION_RULE}
         onClose={() => setEditingCancellation(null)}
-        onSave={(days) => {
-          saveCancelledDays(editingCancellation, days);
+        onSave={(rule) => {
+          saveClassCancellation(editingCancellation, rule);
           setEditingCancellation(null);
         }}
       />
     </div>
   );
 }
-

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, User, Clock, Download, Plus, Trash2 } from "lucide-react";
+import { MapPin, User, Clock, Download, Plus, Trash2, X } from "lucide-react";
 import {
   getDayOverview,
   processSchedule,
@@ -16,7 +16,13 @@ import { useApp } from "@/context/AppContext";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import TimetablePreviewModal from "@/components/shared/TimetablePreviewModal";
 import ClassCancellationDialog from "@/components/shared/ClassCancellationDialog";
-import { getClassCancellationKey, NO_CANCELLED_DAYS, useClassCancellations } from "@/hooks/useClassCancellations";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
+import {
+  EMPTY_CANCELLATION_RULE,
+  getClassCancellationKey,
+  getClassCancellationRule,
+  isClassCancelled,
+} from "@/utils/timetable/classCancellations";
 import CustomClass from "../../minimalist/timetable/CustomClass";
 import { Haptics } from "@/utils/shared/haptics";
 import { useAppLayout } from "@/context/AppLayoutContext";
@@ -28,7 +34,7 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
   const [activeDayOrder, setActiveDayOrder] = useState(1);
   const [customClasses, setCustomClasses] = useState<Record<number, any[]>>({});
   const [editingCancellation, setEditingCancellation] = useState<any>(null);
-  const { cancelledClasses, saveCancelledDays } = useClassCancellations();
+  const { cancelledClasses, saveClassCancellation } = useClassCancellations();
   const [mounted, setMounted] = useState(false);
   const [introMode, setIntroMode] = useState(true);
   
@@ -153,6 +159,16 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
       courseMap,
     );
   }, [effectiveScheduleData, customClasses, activeDayOrder, dayOrder, courseMap]);
+
+  const cancellationDayOrders = useMemo(() => {
+    if (!editingCancellation) return [];
+    const key = getClassCancellationKey(editingCancellation);
+    return [1, 2, 3, 4, 5].filter((order) =>
+      processSchedule(effectiveScheduleData, customClasses, order, 0, courseMap).some(
+        (item) => item.type !== "break" && getClassCancellationKey(item) === key,
+      ),
+    );
+  }, [effectiveScheduleData, customClasses, courseMap, editingCancellation]);
 
   const handleAddClass = () => {
     const success = handleAddClassLogic(
@@ -302,8 +318,7 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
                     );
                   }
 
-                  const cancelledDays = cancelledClasses[getClassCancellationKey(item)] || NO_CANCELLED_DAYS;
-                  const isCancelled = cancelledDays.includes(activeDayOrder);
+                  const isCancelled = isClassCancelled(cancelledClasses, item, activeDayOrder);
 
                   return (
                     <motion.div
@@ -344,11 +359,12 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
                           </div>
                           <button
                             type="button"
-                            aria-label={isCancelled ? "Edit cancelled days" : "Mark class cancelled"}
+                            title={isCancelled ? "Edit cancellation" : "Cancel class"}
+                            aria-label={isCancelled ? "Edit cancellation" : "Cancel class"}
                             onClick={() => setEditingCancellation(item)}
-                            className="text-[9px] font-bold uppercase text-black/40 hover:text-black"
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-black/40 hover:bg-black/5 hover:text-black"
                           >
-                            {isCancelled ? "edit" : "cancel"}
+                            <X size={15} strokeWidth={2.5} />
                           </button>
                           {item.isCustom && (
                             <button
@@ -436,10 +452,12 @@ export default function Timetable({ schedule, dayOrder, data, academia }: any) {
 
       <ClassCancellationDialog
         slot={editingCancellation}
-        cancelledDays={editingCancellation ? cancelledClasses[getClassCancellationKey(editingCancellation)] || NO_CANCELLED_DAYS : NO_CANCELLED_DAYS}
+        dayOrder={activeDayOrder}
+        allowedDayOrders={cancellationDayOrders}
+        cancellation={editingCancellation ? getClassCancellationRule(cancelledClasses, editingCancellation) : EMPTY_CANCELLATION_RULE}
         onClose={() => setEditingCancellation(null)}
-        onSave={(days) => {
-          saveCancelledDays(editingCancellation, days);
+        onSave={(rule) => {
+          saveClassCancellation(editingCancellation, rule);
           setEditingCancellation(null);
         }}
       />

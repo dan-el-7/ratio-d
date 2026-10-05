@@ -1,34 +1,55 @@
 "use client";
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { getClassCancellationKey } from "@/hooks/useClassCancellations";
+import { getClassCancellationKey } from "@/utils/timetable/classCancellations";
+import type { ClassCancellationRule } from "@/utils/timetable/classCancellations";
 
 interface ClassCancellationDialogProps {
   slot: any;
-  cancelledDays: number[];
+  dayOrder: number;
+  allowedDayOrders: number[];
+  cancellation: ClassCancellationRule;
   onClose: () => void;
-  onSave: (days: number[]) => void;
+  onSave: (rule: ClassCancellationRule) => void;
 }
 
 export default function ClassCancellationDialog({
   slot,
-  cancelledDays,
+  dayOrder,
+  allowedDayOrders,
+  cancellation,
   onClose,
   onSave,
 }: ClassCancellationDialogProps) {
-  const [selectedDays, setSelectedDays] = useState<number[]>(cancelledDays);
+  const [repeatOnDayOrder, setRepeatOnDayOrder] = useState(false);
+  const [selectedDates, setSelectedDates] = useState<string[]>(cancellation.dates);
+  const [newDate, setNewDate] = useState("");
   const slotKey = slot ? getClassCancellationKey(slot) : null;
+  const allowedDayOrdersKey = allowedDayOrders.join(",");
+  const dayOrdersKey = cancellation.dayOrders
+    .filter((day) => allowedDayOrders.includes(day))
+    .join(",");
+  const datesKey = cancellation.dates.join(",");
+  const validCancellationDays = dayOrdersKey.split(",").map(Number).filter((day) => day >= 1 && day <= 5);
+  const shouldRepeatOnDayOrder = allowedDayOrders.includes(dayOrder) && (
+    validCancellationDays.includes(dayOrder) ||
+    validCancellationDays.length > 0 ||
+    cancellation.dates.length === 0
+  );
 
-  useEffect(() => setSelectedDays(cancelledDays), [slotKey, cancelledDays]);
+  useEffect(() => {
+    setRepeatOnDayOrder(shouldRepeatOnDayOrder);
+    setSelectedDates(cancellation.dates);
+    setNewDate("");
+  }, [slotKey, dayOrder, shouldRepeatOnDayOrder, allowedDayOrdersKey, datesKey]);
 
   if (!slot) return null;
 
-  const toggleDay = (day: number) => {
-    setSelectedDays((selected) =>
-      selected.includes(day)
-        ? selected.filter((item) => item !== day)
-        : [...selected, day].sort(),
-    );
+  const addDate = () => {
+    if (newDate && !selectedDates.includes(newDate)) {
+      setSelectedDates((dates) => [...dates, newDate].sort());
+    }
+    setNewDate("");
   };
 
   return (
@@ -56,25 +77,65 @@ export default function ClassCancellationDialog({
             <X size={18} />
           </button>
         </div>
-        <p className="text-xs text-theme-muted mb-4">Choose the day orders when this class is cancelled.</p>
-        <div className="grid grid-cols-5 gap-2 mb-6">
-          {[1, 2, 3, 4, 5].map((day) => (
-            <button
-              key={day}
-              type="button"
-              aria-pressed={selectedDays.includes(day)}
-              onClick={() => toggleDay(day)}
-              className={`rounded-xl border px-2 py-3 text-xs font-bold transition-colors ${selectedDays.includes(day) ? "bg-theme-emphasis text-theme-bg border-theme-emphasis" : "bg-theme-surface text-theme-muted border-theme-border"}`}
-            >
-              Day {day}
-            </button>
-          ))}
+
+        <p className="text-xs text-theme-muted mb-4">
+          Only day orders that contain this class can be saved. To cancel it on another order, mark its slot there. Add calendar dates for one-off cancellations.
+        </p>
+        <button
+          type="button"
+          aria-pressed={repeatOnDayOrder}
+          onClick={() => setRepeatOnDayOrder((repeat) => !repeat)}
+          className={`mb-6 w-full rounded-xl border px-4 py-3 text-left text-xs font-bold transition-colors ${repeatOnDayOrder ? "bg-theme-emphasis text-theme-bg border-theme-emphasis" : "bg-theme-surface text-theme-muted border-theme-border"}`}
+        >
+          Day order {dayOrder} · {repeatOnDayOrder ? "Repeats on this order" : "Date only"}
+        </button>
+
+        <label htmlFor="class-cancellation-date" className="block text-xs font-bold text-theme-text mb-2">
+          Optional calendar date
+        </label>
+        <div className="flex gap-2 mb-2">
+          <input
+            id="class-cancellation-date"
+            type="date"
+            value={newDate}
+            onChange={(event) => setNewDate(event.target.value)}
+            className="min-w-0 flex-1 rounded-xl border border-theme-border bg-theme-surface px-3 py-2 text-sm text-theme-text"
+          />
+          <button
+            type="button"
+            onClick={addDate}
+            disabled={!newDate}
+            className="rounded-xl border border-theme-border px-3 text-xs font-bold text-theme-text disabled:opacity-40"
+          >
+            Add date
+          </button>
         </div>
-        <div className="flex gap-3">
+        {selectedDates.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-5">
+            {selectedDates.map((date) => (
+              <button
+                key={date}
+                type="button"
+                onClick={() => setSelectedDates((dates) => dates.filter((item) => item !== date))}
+                aria-label={`Remove cancellation date ${date}`}
+                className="inline-flex items-center gap-1 rounded-full bg-theme-surface px-3 py-1.5 text-xs font-bold text-theme-text"
+              >
+                {date}<X size={12} />
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-3 mt-6">
           <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-theme-border py-3 text-sm font-bold text-theme-muted">
             Close
           </button>
-          <button type="button" onClick={() => onSave(selectedDays)} className="flex-1 rounded-xl bg-theme-emphasis py-3 text-sm font-bold text-theme-bg">
+          <button type="button" onClick={() => {
+            const dayOrders = cancellation.dayOrders.filter(
+              (day) => allowedDayOrders.includes(day) && day !== dayOrder,
+            );
+            if (repeatOnDayOrder && allowedDayOrders.includes(dayOrder)) dayOrders.push(dayOrder);
+            onSave({ dayOrders: [...new Set(dayOrders)].sort(), dates: selectedDates });
+          }} className="flex-1 rounded-xl bg-theme-emphasis py-3 text-sm font-bold text-theme-bg">
             Save
           </button>
         </div>
