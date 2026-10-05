@@ -1,8 +1,11 @@
 "use client";
-import React, { useMemo, memo } from "react";
+import React, { useMemo, memo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Target, Calendar } from "lucide-react";
 import { useCalendarData } from "@/hooks/useCalendarData";
+import CalendarScheduleCard from "@/components/shared/CalendarScheduleCard";
+import { getCalendarScheduleItems } from "@/utils/timetable/calendarSchedule";
 import calendarDataJson from "@/data/calendar_data.json";
 
 const CalendarDay = memo(
@@ -85,6 +88,9 @@ const CalendarDay = memo(
 CalendarDay.displayName = "CalendarDay";
 
 const CalendarPage = ({ calendarData, academia, data }: any) => {
+  const [showScheduleCard, setShowScheduleCard] = useState(false);
+  const [lastCalendarTap, setLastCalendarTap] = useState("");
+  const router = useRouter();
   const activeData = useMemo(() => {
     return (academia?.calendarData?.length > 0)
       ? academia.calendarData
@@ -111,7 +117,24 @@ const CalendarPage = ({ calendarData, academia, data }: any) => {
     goToToday,
     gridData,
     handleDateClick,
+    selectedDate,
+    currentEvent,
   } = useCalendarData(activeData, isTargetAudience);
+
+  const schedule = academia?.effectiveSchedule || data?.effectiveSchedule || data?.schedule || data?.timetable || data?.time_table || {};
+  const scheduleItems = useMemo(
+    () => getCalendarScheduleItems(schedule, currentEvent?.dayOrder || currentEvent?.order),
+    [schedule, currentEvent],
+  );
+  const handleCalendarDateClick = (date: Date) => {
+    const dateKey = date.toDateString();
+    if (lastCalendarTap === dateKey) setShowScheduleCard(true);
+    else {
+      setLastCalendarTap(dateKey);
+      setShowScheduleCard(false);
+    }
+    handleDateClick(date);
+  };
 
   const brutalistTheme = useMemo(() => {
     if (display.label === "day order" && (display.infoSub?.toLowerCase().includes("exam") || display.infoMain?.toLowerCase().includes("exam"))) {
@@ -231,13 +254,26 @@ const CalendarPage = ({ calendarData, academia, data }: any) => {
                 <CalendarDay
                   key={item.key}
                   item={item}
-                  onClick={handleDateClick}
+                  onClick={handleCalendarDateClick}
                 />
               );
             })}
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showScheduleCard && scheduleItems.length > 0 && (
+          <CalendarScheduleCard
+            variant="brutalist"
+            date={selectedDate}
+            dayOrder={currentEvent?.dayOrder || currentEvent?.order || "-"}
+            classes={scheduleItems}
+            onClose={() => setShowScheduleCard(false)}
+            onOpenTimetable={() => router.push("/timetable")}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {introMode && (
