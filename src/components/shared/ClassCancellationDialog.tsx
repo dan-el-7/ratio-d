@@ -33,8 +33,7 @@ export default function ClassCancellationDialog({
   const validCancellationDays = dayOrdersKey.split(",").map(Number).filter((day) => day >= 1 && day <= 5);
   const shouldRepeatOnDayOrder = allowedDayOrders.includes(dayOrder) && (
     validCancellationDays.includes(dayOrder) ||
-    validCancellationDays.length > 0 ||
-    cancellation.dates.length === 0
+    (validCancellationDays.length === 0 && cancellation.dates.length === 0)
   );
 
   useEffect(() => {
