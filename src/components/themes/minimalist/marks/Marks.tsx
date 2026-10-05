@@ -181,7 +181,7 @@ export default function Marks({
   };
 
   const attentionRequired = useMemo(() => {
-    const valid = subjects.filter((s: any) => !s.isNA && s.totalMax > 0 && s.percentage < 75);
+    const valid = subjects.filter((s: any) => !s.isNA && s.totalMax > 0 && s.percentage < 50);
     return [...valid]
       .sort((a: any, b: any) => {
         if (a.percentage !== b.percentage) return a.percentage - b.percentage;
@@ -393,10 +393,10 @@ export default function Marks({
               variants={itemVariants}
               className="w-full p-5 flex flex-col gap-4 mb-8 shrink-0 rounded-[32px] border-[2px] border-dashed"
               style={{
-                borderColor: attentionRequired.some((s: any) => s.percentage < 75) 
+                borderColor: attentionRequired.length > 0 
                   ? 'color-mix(in srgb, var(--theme-secondary) 50%, transparent)' 
                   : 'color-mix(in srgb, var(--theme-highlight) 50%, transparent)',
-                backgroundColor: attentionRequired.some((s: any) => s.percentage < 75) 
+                backgroundColor: attentionRequired.length > 0 
                   ? 'color-mix(in srgb, var(--theme-secondary) 5%, transparent)' 
                   : 'color-mix(in srgb, var(--theme-highlight) 5%, transparent)',
                 borderDasharray: '12 16'
@@ -404,13 +404,13 @@ export default function Marks({
             >
               <div className="flex items-center gap-3 w-full">
                 <span
-                  className={`text-[12px] font-bold lowercase tracking-[0.25em] whitespace-nowrap ${attentionRequired.some((s: any) => s.percentage < 75) ? "text-theme-secondary" : "status-text-safe"}`}
+                  className={`text-[12px] font-bold lowercase tracking-[0.25em] whitespace-nowrap ${attentionRequired.length > 0 ? "text-theme-secondary" : "status-text-safe"}`}
                   style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
                 >
                   academic emergency
                 </span>
                 <div
-                  className={`flex-1 h-[1.5px] rounded-full opacity-40 bg-current ${attentionRequired.some((s: any) => s.percentage < 75) ? "text-theme-secondary" : "status-text-safe"}`}
+                  className={`flex-1 h-[1.5px] rounded-full opacity-40 bg-current ${attentionRequired.length > 0 ? "text-theme-secondary" : "status-text-safe"}`}
                 />
               </div>
               {attentionRequired.map((sub: any) => (
@@ -421,13 +421,13 @@ export default function Marks({
                   <div className="flex justify-between items-center w-full">
                     <div className="flex flex-col items-center justify-center min-w-[85px] shrink-0 px-1">
                       <span
-                        className={`text-[3.2rem] leading-[0.8] font-black tracking-tighter ${sub.percentage < 75 ? "text-theme-secondary" : "text-theme-text"}`}
+                        className={`text-[3.2rem] leading-[0.8] font-black tracking-tighter ${sub.percentage < 50 ? "text-theme-secondary" : "text-theme-text"}`}
                         style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
                       >
                         {fmt(sub.totalGot)}
                       </span>
                        <span
-                        className={`text-[10px] font-bold uppercase tracking-widest mt-1 text-center ${sub.percentage < 75 ? "text-theme-secondary" : "text-theme-muted"}`}
+                        className={`text-[10px] font-bold uppercase tracking-widest mt-1 text-center ${sub.percentage < 50 ? "text-theme-secondary" : "text-theme-muted"}`}
                         style={{ fontFamily: "var(--font-afacad), sans-serif" }}
                       >
                         out of {sub.totalMax}
@@ -444,21 +444,21 @@ export default function Marks({
                           </span>
                         )}
                         <span
-                          className={`text-[16px] font-black uppercase tracking-widest leading-[1.1] truncate ${sub.percentage < 75 ? "text-theme-secondary" : "text-theme-text"}`}
+                          className={`text-[16px] font-black uppercase tracking-widest leading-[1.1] truncate ${sub.percentage < 50 ? "text-theme-secondary" : "text-theme-text"}`}
                           style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
                         >
                           {sub.displayCode}
                         </span>
                       </div>
                       <span
-                        className={`text-[13px] font-medium lowercase tracking-wide leading-[1.1] mt-0.5 truncate w-full ${sub.percentage < 75 ? "text-theme-secondary" : "text-theme-muted"}`}
+                        className={`text-[13px] font-medium lowercase tracking-wide leading-[1.1] mt-0.5 truncate w-full ${sub.percentage < 50 ? "text-theme-secondary" : "text-theme-muted"}`}
                         style={{ fontFamily: "var(--font-afacad), sans-serif" }}
                       >
                         {sub.displayName}
                       </span>
                       <div className="flex mt-2 justify-end">
                         <span
-                          className={`text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-theme-text-10 ${sub.percentage < 75 ? "text-theme-secondary" : "text-theme-highlight"}`}
+                          className={`text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-theme-text-10 ${sub.percentage < 50 ? "text-theme-secondary" : "text-theme-highlight"}`}
                           style={{ fontFamily: "var(--font-afacad), sans-serif" }}
                         >
                           {sub.credits} credits
@@ -518,7 +518,7 @@ export default function Marks({
               <div className="w-full flex items-center justify-center gap-1.5 mt-1">
                 <UserAvatar seed={profileSeed} className="w-4 h-4 opacity-80" />
                 <div
-                  className={`text-[11px] font-bold lowercase tracking-widest opacity-80 ${attentionRequired.some((s: any) => s.percentage < 75) ? "text-theme-secondary" : "text-theme-highlight"}`}
+                  className={`text-[11px] font-bold lowercase tracking-widest opacity-80 ${attentionRequired.length > 0 ? "text-theme-secondary" : "text-theme-highlight"}`}
                   style={{ fontFamily: "var(--font-afacad), sans-serif" }}
                 >
                   {attentionFlavorText}
@@ -554,7 +554,7 @@ export default function Marks({
                 <div className="flex justify-between items-center w-full">
                   <div className="flex flex-col items-center justify-center min-w-[85px] shrink-0 px-1">
                     <span
-                      className="text-[3.2rem] leading-[0.8] font-black tracking-tighter text-theme-text"
+                      className={`text-[3.2rem] leading-[0.8] font-black tracking-tighter ${sub.totalMax > 0 && sub.percentage < 50 ? "status-text-cooked" : "text-theme-text"}`}
                       style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
                     >
                       {fmt(sub.totalGot)}

@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  --theme-warning: #FFB020;
   --font-montserrat: 'Montserrat', sans-serif;
   --font-afacad:    'Afacad', sans-serif;
   --font-urbanosta: var(--font-urbanosta), sans-serif;
@@ -287,18 +288,22 @@ input:-webkit-autofill {
   .status-text-safe    { color: var(--theme-highlight); }
   .status-text-danger  { color: var(--theme-highlight); }
   .status-text-cooked  { color: var(--theme-secondary); }
+  .status-text-warning { color: var(--theme-warning); }
 
   .status-bg-safe   { background-color: color-mix(in srgb, var(--theme-highlight) 12%, transparent); }
   .status-bg-danger { background-color: color-mix(in srgb, var(--theme-highlight) 12%, transparent); }
   .status-bg-cooked { background-color: color-mix(in srgb, var(--theme-secondary) 12%, transparent); }
+  .status-bg-warning { background-color: color-mix(in srgb, var(--theme-warning) 12%, transparent); }
 
   .status-border-safe   { border-color: color-mix(in srgb, var(--theme-highlight) 35%, transparent); }
   .status-border-danger { border-color: color-mix(in srgb, var(--theme-highlight) 35%, transparent); }
   .status-border-cooked { border-color: color-mix(in srgb, var(--theme-secondary) 35%, transparent); }
+  .status-border-warning { border-color: color-mix(in srgb, var(--theme-warning) 35%, transparent); }
 
   .status-boxbg-safe   { background-color: color-mix(in srgb, var(--theme-highlight) 18%, var(--theme-bg)); }
   .status-boxbg-danger { background-color: color-mix(in srgb, var(--theme-highlight) 18%, var(--theme-bg)); }
   .status-boxbg-cooked { background-color: color-mix(in srgb, var(--theme-secondary) 18%, var(--theme-bg)); }
+  .status-boxbg-warning { background-color: color-mix(in srgb, var(--theme-warning) 18%, var(--theme-bg)); }
 
 
   .bg-theme-border-line  { background-color: var(--border-color, rgba(0,0,0,0.1)); }

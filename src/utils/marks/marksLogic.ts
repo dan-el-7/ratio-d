@@ -193,33 +193,49 @@ export const calculatePredictedGpa = (
   return totalCredits === 0 ? "0.00" : (totalPoints / totalCredits).toFixed(2);
 };
 
-export const getTheme = (pct: number, max: number) => {
-  if (max === 0 || pct > 50)
-    return {
-      wrapperBg: "status-bg-safe",
-      cardBg: "bg-theme-surface",
-      border: "status-border-safe",
-      text: "status-text-safe",
-      subText: "status-text-safe opacity-80",
-      boxBg: "status-boxbg-safe",
-      dottedClass: "safe-dotted",
-    };
-  return {
-    wrapperBg: "status-bg-cooked",
-    cardBg: "bg-theme-surface",
-    border: "status-border-cooked",
+export type MarkLevel = "safe" | "danger" | "cooked";
+
+export const getMarkLevel = (pct: number): MarkLevel =>
+  pct < 50 ? "cooked" : pct < 75 ? "danger" : "safe";
+
+const LEVEL_STYLES: Record<MarkLevel, { text: string; bg: string; border: string; boxBg: string }> = {
+  safe: {
+    text: "status-text-safe",
+    bg: "status-bg-safe",
+    border: "status-border-safe",
+    boxBg: "status-boxbg-safe",
+  },
+  danger: {
+    text: "status-text-warning",
+    bg: "status-bg-warning",
+    border: "status-border-warning",
+    boxBg: "status-boxbg-warning",
+  },
+  cooked: {
     text: "status-text-cooked",
-    subText: "status-text-cooked opacity-80",
+    bg: "status-bg-cooked",
+    border: "status-border-cooked",
     boxBg: "status-boxbg-cooked",
-    dottedClass: "warning-dotted",
+  },
+};
+
+export const getTheme = (pct: number, max: number) => {
+  const level = max === 0 ? "safe" : getMarkLevel(pct);
+  const c = LEVEL_STYLES[level];
+  return {
+    wrapperBg: c.bg,
+    cardBg: "bg-theme-surface",
+    border: c.border,
+    text: c.text,
+    subText: `${c.text} opacity-80`,
+    boxBg: c.boxBg,
+    dottedClass: level === "safe" ? "safe-dotted" : "warning-dotted",
   };
 };
 
 export const getMarkColor = (got: number, max: number) => {
   if (max === 0) return "text-theme-text";
-  const pct = (got / max) * 100;
-  if (pct > 50) return "status-text-safe";
-  return "status-text-cooked";
+  return LEVEL_STYLES[getMarkLevel((got / max) * 100)].text;
 };
 
 export const getBoxTheme = (
@@ -233,19 +249,13 @@ export const getBoxTheme = (
       subText: "text-theme-subtle",
       border: "border-theme-border",
     };
-  const pct = (got / max) * 100;
-  if (pct > 50)
-    return {
-      boxBg: "status-boxbg-safe",
-      text: "status-text-safe",
-      subText: "status-text-safe opacity-60",
-      border: "status-border-safe",
-    };
+  const level = getMarkLevel((got / max) * 100);
+  const c = LEVEL_STYLES[level];
   return {
-    boxBg: "status-boxbg-cooked",
-    text: "status-text-cooked",
-    subText: "status-text-cooked opacity-70",
-    border: "status-border-cooked",
+    boxBg: c.boxBg,
+    text: c.text,
+    subText: `${c.text} ${level === "safe" ? "opacity-60" : "opacity-70"}`,
+    border: c.border,
   };
 };
 
@@ -325,13 +335,8 @@ export const processAndSortMarks = (
       let status: "cooked" | "danger" | "safe" | "neutral" = "neutral";
       let badge = "pending";
       if (!actualIsNA && max > 0) {
-        if (percentage > 50) {
-          status = "safe";
-          badge = "safe";
-        } else {
-          status = "cooked";
-          badge = "critical";
-        }
+        status = getMarkLevel(percentage);
+        badge = status === "safe" ? "safe" : status === "danger" ? "low" : "critical";
       }
       const latestTest =
         assessments.length > 0 ? assessments[assessments.length - 1] : null;
