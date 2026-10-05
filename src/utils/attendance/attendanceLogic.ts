@@ -1,5 +1,7 @@
 import { flavorText } from "../shared/flavortext";
 import { CalendarEvent, ScheduleData } from "@/types";
+import { isClassCancelled } from "@/utils/timetable/classCancellations";
+import type { ClassCancellationMap } from "@/utils/timetable/classCancellations";
 
 export const getEffectiveSchedule = (data: any, schedule: any) => {
   if (schedule) return schedule;
@@ -191,7 +193,8 @@ export const getImpactMap = (
   selectedDates: Record<string, "leave" | "attend" | "od">,
   calendarData: CalendarEvent[],
   effectiveSchedule: ScheduleData,
-  baseAttendance: any[]
+  baseAttendance: any[],
+  classCancellations: ClassCancellationMap = {},
 ) => {
   const impact: Record<string, { conducted: number; present: number; pastOdCredit: number }> = {};
   if (calendarData.length === 0 || Object.keys(effectiveSchedule).length === 0)
@@ -243,6 +246,7 @@ export const getImpactMap = (
 
           Object.entries(dayClasses).forEach(([timeRange, cls]: [string, any]) => {
             if (!cls) return;
+            if (isClassCancelled(classCancellations, cls, orderNum, dateStr, timeRange)) return;
             const targetSubject = matchAttendance(cls, baseAttendance);
             const sessionWeight = calculateSessions(timeRange);
 
@@ -273,7 +277,8 @@ export const getRecoveryDate = (
   calendarData: any[],
   effectiveSchedule: any,
   selectedDates: Record<string, "leave" | "attend" | "od"> = {},
-  predictAction: string = "leave"
+  predictAction: string = "leave",
+  classCancellations: ClassCancellationMap = {},
 ) => {
   if (!subject) return null;
   
@@ -302,6 +307,7 @@ export const getRecoveryDate = (
           if (dayClasses) {
             Object.entries(dayClasses).forEach(([timeRange, cls]: [string, any]) => {
               if (!cls) return;
+              if (isClassCancelled(classCancellations, cls, orderNum, dateStr, timeRange)) return;
               const matched = matchAttendance(cls, [subject]);
               if (matched || (cls.id && cls.id === subject.id)) {
                 const weight = calculateSessions(timeRange);
@@ -332,6 +338,7 @@ export const getRecoveryDate = (
         const action = selectedDates[day.norm || ""];
         Object.entries(dayClasses).forEach(([timeRange, cls]: [string, any]) => {
           if (!cls) return;
+          if (isClassCancelled(classCancellations, cls, orderNum, day.norm, timeRange)) return;
           const matched = matchAttendance(cls, [subject]);
           if (matched || (cls.id && cls.id === subject.id)) {
             const weight = calculateSessions(timeRange);

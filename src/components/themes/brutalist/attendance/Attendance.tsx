@@ -23,6 +23,7 @@ import { useAppLayout } from "@/context/AppLayoutContext";
 import { Haptics } from "@/utils/shared/haptics";
 import { useApp } from "@/context/AppContext";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
 
 const MarginCounter = ({ value }: { value: number }) => {
   const nodeRef = useRef<HTMLSpanElement>(null);
@@ -58,6 +59,7 @@ const MobileAttendance = ({
   academia: any;
 }) => {
   const { profileSeed } = useApp();
+  const { cancelledClasses } = useClassCancellations();
   const { setIsSwipeDisabled } = useAppLayout();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [predictMode, setPredictMode] = useState(false);
@@ -96,8 +98,8 @@ const MobileAttendance = ({
   const effectiveSchedule = useMemo(() => academia?.effectiveSchedule || data?.schedule || data?.timetable || {}, [academia?.effectiveSchedule, data?.schedule, data?.timetable]);
 
   const predictionImpact = useMemo(
-    () => getImpactMap(selectedDates, calendarData, effectiveSchedule, baseAttendance),
-    [selectedDates, calendarData, effectiveSchedule, baseAttendance]
+    () => getImpactMap(selectedDates, calendarData, effectiveSchedule, baseAttendance, cancelledClasses),
+    [selectedDates, calendarData, effectiveSchedule, baseAttendance, cancelledClasses]
   );
 
   const processedList = useMemo(() => {
@@ -114,7 +116,8 @@ const MobileAttendance = ({
         calendarData,
         effectiveSchedule,
         selectedDates,
-        predType
+        predType,
+        cancelledClasses,
       );
 
       return {
@@ -131,7 +134,7 @@ const MobileAttendance = ({
         recoveryDate: recDate,
       };
     });
-  }, [baseAttendance, predictionImpact, isPredicting, calendarData, effectiveSchedule, selectedDates, predType]);
+  }, [baseAttendance, predictionImpact, isPredicting, calendarData, effectiveSchedule, selectedDates, predType, cancelledClasses]);
 
   const overallStats = useMemo(() => {
     if (baseAttendance.length === 0)

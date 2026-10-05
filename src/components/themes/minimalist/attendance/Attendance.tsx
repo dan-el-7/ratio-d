@@ -19,6 +19,7 @@ import { getOverallStats } from "@/utils/attendance/attendanceLogic";
 import { getRandomRoast } from "@/utils/shared/flavortext";
 import { useApp } from "@/context/AppContext";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
 
 const BEZIER = [0.34, 0.15, 0.16, 0.96] as const;
 
@@ -51,6 +52,7 @@ export default function Attendance({
   academia: any;
 }) {
   const { profileSeed, setPortalAuthOpen } = useApp();
+  const { cancelledClasses } = useClassCancellations();
   const { setIsSwipeDisabled } = useAppLayout();
   const [isPredictOverlay, setIsPredictOverlay] = useState(false);
   const [isPredicting, setIsPredicting] = useState(false);
@@ -104,9 +106,10 @@ export default function Attendance({
       selectedDates,
       calDataToUse,
       academia?.effectiveSchedule || data?.schedule || data?.timetable || {},
-      baseAttendance
+      baseAttendance,
+      cancelledClasses,
     );
-  }, [isPredicting, selectedDates, academia, baseAttendance, data?.schedule, data?.timetable]);
+  }, [isPredicting, selectedDates, academia, baseAttendance, data?.schedule, data?.timetable, cancelledClasses]);
 
   const processedList = useMemo(() => {
     const list = getProcessedList(
@@ -127,7 +130,8 @@ export default function Attendance({
         calDataToUse, 
         academia?.effectiveSchedule || data?.schedule || data?.timetable || {},
         selectedDates,
-        predictAction
+        predictAction,
+        cancelledClasses,
       );
 
       return {
@@ -145,7 +149,7 @@ export default function Attendance({
         recoveryDate: recDate,
       };
     });
-  }, [baseAttendance, impactMap, isPredicting, academia, data, selectedDates, predictAction]);
+  }, [baseAttendance, impactMap, isPredicting, academia, data, selectedDates, predictAction, cancelledClasses]);
 
   const actionRequired = useMemo(
     () => processedList.filter((s) => !s.safe).sort((a, b) => (b.val ?? 0) - (a.val ?? 0)),
