@@ -20,7 +20,7 @@ const CompactSlot = ({ slot }: { slot: any }) => {
     );
   }
 
-  const isLab = slot.type === "lab" || slot.slot?.includes("P");
+  const isLab = slot.type === "lab";
   
   return (
     <motion.div
@@ -54,7 +54,7 @@ const CompactSlot = ({ slot }: { slot: any }) => {
 };
 
 const TimelineCard = ({ slot, time, active, onClick }: { slot: any, time: string, active: boolean, onClick: () => void }) => {
-  const isLab = slot?.type === "lab" || slot?.slot?.includes("P");
+  const isLab = slot?.type === "lab";
   
   if (!slot) {
     return (

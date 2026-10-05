@@ -381,7 +381,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               let next = { ...existingData, attendance: portalData.attendance };
               if (portalData.monthly) next.monthly = portalData.monthly;
               if (portalData.marks) next.marks = portalData.marks;
-              if (portalData.schedule) next.schedule = portalData.schedule;
+              if (portalData.schedule) {
+                next.schedule = portalData.schedule;
+                next.timetable = portalData.schedule;
+              }
               if (portalData.courses) next.courses = portalData.courses;
               if (portalData.profile) next.profile = portalData.profile;
               next.isPortal = true;
