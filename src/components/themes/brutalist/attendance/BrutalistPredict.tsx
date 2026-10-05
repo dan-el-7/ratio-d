@@ -117,7 +117,7 @@ export default function BrutalistPredict({
 
             <div className="w-full flex flex-col bg-white/5 border border-white/10 rounded-[24px] p-5 mb-4 shrink-0">
               <div className="grid grid-cols-7 gap-2 mb-3">
-                {["m", "t", "w", "t", "f", "s", "s"].map((d, i) => (
+                {["s", "m", "t", "w", "t", "f", "s"].map((d, i) => (
                   <div key={i} className="text-center text-[11px] font-bold text-white/30 uppercase" style={{ fontFamily: "Montserrat" }}>
                     {d}
                   </div>

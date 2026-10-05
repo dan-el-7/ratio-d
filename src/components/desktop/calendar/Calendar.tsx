@@ -183,7 +183,7 @@ export default function DesktopCalendar() {
         </header>
 
         <div className="px-10 py-2.5 grid grid-cols-7 gap-3 border-y border-theme-border bg-theme-surface/10">
-          {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map(d => (
+          {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map(d => (
             <span key={d} className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-theme-muted" style={{ fontFamily: 'var(--font-montserrat)' }}>{d}</span>
           ))}
         </div>
