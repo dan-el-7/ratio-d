@@ -98,7 +98,6 @@ interface HomeDashboardProps {
   criticalAttendance?: any[];
   overallMarks?: number;
   recentMarks?: any[];
-  onRefresh?: () => Promise<void>;
   isRefreshing?: boolean;
   data?: any;
   academia?: any;
@@ -115,7 +114,6 @@ const HomeDashboard = ({
   criticalAttendance = [],
   overallMarks = 0,
   recentMarks = [],
-  onRefresh,
   isRefreshing: isParentRefreshing,
   data,
   academia,
@@ -158,7 +156,7 @@ const HomeDashboard = ({
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
-  } = usePullToRefresh(isAlertExpanded || isMetricExpanded, onRefresh);
+  } = usePullToRefresh(isAlertExpanded || isMetricExpanded);
 
   const isRefreshing = isLocalRefreshing || isParentRefreshing;
 

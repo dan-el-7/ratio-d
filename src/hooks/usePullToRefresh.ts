@@ -1,14 +1,12 @@
 import { useState, useRef } from "react";
 import { Haptics } from "@/utils/shared/haptics";
-import { useApp } from "@/context/AppContext";
 
-export function usePullToRefresh(isAlertsOpen: boolean = false, onRefresh?: () => Promise<void>) {
+export function usePullToRefresh(isAlertsOpen: boolean = false) {
   const [pullY, setPullY] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const startY = useRef(0);
   const startX = useRef(0);
-  const { refreshData, userData } = useApp();
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const target = e.currentTarget as HTMLElement;
@@ -39,21 +37,16 @@ export function usePullToRefresh(isAlertsOpen: boolean = false, onRefresh?: () =
     }
   };
 
-  const handleTouchEnd = async () => {
+  const handleTouchEnd = () => {
     setIsDragging(false);
     if (pullY > 80) {
       setIsRefreshing(true);
       setPullY(80);
       Haptics.heavy();
       
-      try {
-        if (onRefresh) await onRefresh();
-        else if (userData) await refreshData(userData);
-      } catch {
-      }
-
-      setIsRefreshing(false);
-      setPullY(0);
+      setTimeout(() => {
+        window.location.reload();
+      }, 400);
     } else {
       setPullY(0);
     }

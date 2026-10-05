@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import { useApp } from "@/context/AppContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -22,18 +22,12 @@ import { useAppLayout } from "@/context/AppLayoutContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function DashboardPage() {
-  const { userData, customDisplayName, refreshData, isUpdating } = useApp();
+  const { userData, customDisplayName, isUpdating } = useApp();
   const { uiStyle } = useTheme();
   const { onOpenSettings } = useAppLayout();
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const academia = useAcademiaData(userData as any);
   const isMobile = useIsMobile();
-
-  const handleRefresh = useCallback(async () => {
-    if (userData) {
-      await refreshData(userData);
-    }
-  }, [userData, refreshData]);
 
   if (isMobile === undefined) {
     return <div className="h-full w-full bg-theme-bg" />;
@@ -57,7 +51,6 @@ export default function DashboardPage() {
         criticalAttendance={academia.criticalAttendance}
         overallMarks={(academia as any).overallMarks || 0}
         recentMarks={(academia as any).recentMarks || []}
-        onRefresh={handleRefresh}
         isRefreshing={isUpdating}
         data={userData}
         academia={academia}
@@ -73,7 +66,6 @@ export default function DashboardPage() {
       isAlertsOpen={isAlertsOpen}
       setIsAlertsOpen={setIsAlertsOpen}
       startEntrance={true}
-      onRefresh={handleRefresh}
       isRefreshing={isUpdating}
     />
   );

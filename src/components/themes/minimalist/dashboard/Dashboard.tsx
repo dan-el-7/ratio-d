@@ -77,7 +77,6 @@ export default function Dashboard({
   setIsAlertsOpen,
   setIsSwipeDisabled,
   startEntrance,
-  onRefresh,
   isRefreshing: isParentRefreshing,
 }: {
   data: AcademiaData;
@@ -87,7 +86,6 @@ export default function Dashboard({
   setIsAlertsOpen: (open: boolean) => void;
   setIsSwipeDisabled?: (disabled: boolean) => void;
   startEntrance: boolean;
-  onRefresh?: () => Promise<void>;
   isRefreshing?: boolean;
 }) {
   const router = useRouter();
@@ -98,7 +96,7 @@ export default function Dashboard({
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
-  } = usePullToRefresh(isAlertsOpen, onRefresh);
+  } = usePullToRefresh(isAlertsOpen);
 
   const isRefreshing = isLocalRefreshing || isParentRefreshing;
 
