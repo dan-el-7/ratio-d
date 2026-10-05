@@ -3,7 +3,7 @@
   "short_name": "Ratio'd",
   "description": "cool looking and simple academia dashboard",
   "id": "/",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "display": "standalone",
   "scope": "/",
   "orientation": "portrait",
