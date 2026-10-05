@@ -129,5 +129,7 @@ export const useCalendarData = (
     goToToday,
     gridData,
     handleDateClick,
+    selectedDate,
+    currentEvent,
   };
 };
