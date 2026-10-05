@@ -328,7 +328,7 @@ const MobileAttendance = ({
   const stopProp = (e: any) => e.stopPropagation();
 
   const daysInMonth = new Date(currentCalDate.getFullYear(), currentCalDate.getMonth() + 1, 0).getDate();
-  const startOffset = (new Date(currentCalDate.getFullYear(), currentCalDate.getMonth(), 1).getDay() + 6) % 7;
+  const startOffset = new Date(currentCalDate.getFullYear(), currentCalDate.getMonth(), 1).getDay();
   const monthName = currentCalDate.toLocaleString("default", { month: "long" }).toLowerCase();
 
   return (

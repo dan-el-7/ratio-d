@@ -171,7 +171,7 @@ export default function Attendance({
   const calMonth = currentCalDate.getMonth();
   const monthName = currentCalDate.toLocaleString("en-US", { month: "long" });
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const startOffset = (new Date(calYear, calMonth, 1).getDay() + 6) % 7;
+  const startOffset = new Date(calYear, calMonth, 1).getDay();
   const formatDate = (y: number, m: number, d: number) =>
     `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   const isWeekendStr = (dateStr: string) => {

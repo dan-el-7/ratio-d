@@ -9,7 +9,7 @@ export const getCalendarGrid = (
 ) => {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
-  const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+  const startOffset = firstDay;
   const slots: CalendarSlot[] = [];
 
   for (let i = 0; i < startOffset; i++) {

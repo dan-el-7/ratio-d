@@ -213,7 +213,7 @@ const CalendarPage = ({ calendarData, academia, data }: any) => {
           </div>
         </div>
         <div className="grid grid-cols-7 text-center mb-3">
-          {["m", "t", "w", "t", "f", "s", "s"].map((d, i) => (
+          {["s", "m", "t", "w", "t", "f", "s"].map((d, i) => (
             <span
               key={i}
               className="text-[10px] font-black text-black/30 font-mono uppercase tracking-widest"

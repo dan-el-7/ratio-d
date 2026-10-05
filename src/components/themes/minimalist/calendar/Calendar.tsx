@@ -266,7 +266,7 @@ const Calendar = ({ data, academia }: any) => {
               </div>
             </div>
             <div className="grid grid-cols-7 gap-2 mb-4 shrink-0">
-              {["m", "t", "w", "t", "f", "s", "s"].map((d, i) => (
+              {["s", "m", "t", "w", "t", "f", "s"].map((d, i) => (
                 <div
                   key={i}
                   className="text-center text-[12px] font-bold text-theme-muted uppercase tracking-widest"
