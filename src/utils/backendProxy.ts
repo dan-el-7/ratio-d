@@ -1,4 +1,4 @@
-export async function fetchWithLoadBalancer(endpoint: string, options: RequestInit = {}) {
+export async function fetchWithLoadBalancer(endpoint: string, options: RequestInit = {}, timeoutMs = 25000) {
   const isLocal = typeof window !== 'undefined' && 
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     
@@ -24,7 +24,7 @@ export async function fetchWithLoadBalancer(endpoint: string, options: RequestIn
 
   const fullUrl = `${targetUrl}${endpoint}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch(fullUrl, {

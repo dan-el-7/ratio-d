@@ -23,7 +23,7 @@ interface AppContextType {
   setIsBackendError: (val: boolean) => void;
   backendErrorMsg: string | null;
   setBackendErrorMsg: (msg: string | null) => void;
-  refreshData: (creds: any, existingData: any) => Promise<any>;
+  refreshData: (existingData: any) => Promise<any>;
   performLogin: (creds: any) => Promise<any>;
   performPortalLogin: (creds: any) => Promise<any>;
   loginPromise: Promise<any> | null;
@@ -172,6 +172,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     router.replace("/login");
   }, [router]);
 
+  const checkConnectivity = useCallback(async (err: any) => {
+    if (err?.name !== "AbortError" && err?.message !== "Failed to fetch") return;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1200);
+      await fetch("https://1.1.1.1", { method: "HEAD", mode: "no-cors", signal: controller.signal });
+      clearTimeout(timeoutId);
+      setIsBackendError(true);
+    } catch {
+      setIsOffline(true);
+    }
+  }, []);
+
   const performLogin = useCallback(async (creds: any) => {
     setIsBackendError(false);
     setBackendErrorMsg(null);
@@ -219,16 +232,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (err: any) {
         if (err.message === 'Backend error') {
           setIsBackendError(true);
-        } else if (err.name === 'AbortError' || err.message === 'Failed to fetch') {
-          try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1200);
-            await fetch("https://1.1.1.1", { method: "HEAD", mode: "no-cors", signal: controller.signal });
-            clearTimeout(timeoutId);
-            setIsBackendError(true);
-          } catch {
-            setIsOffline(true);
-          }
+        } else {
+          await checkConnectivity(err);
         }
         throw err;
       }
@@ -236,7 +241,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setLoginPromise(promise);
     return promise;
-  }, []);
+  }, [checkConnectivity]);
 
   const performPortalLogin = useCallback(async (creds: any) => {
     setIsBackendError(false);
@@ -333,16 +338,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (err: any) {
         if (err.message === 'Backend error') {
           setIsBackendError(true);
-        } else if (err.name === 'AbortError' || err.message === 'Failed to fetch') {
-          try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1200);
-            await fetch("https://1.1.1.1", { method: "HEAD", mode: "no-cors", signal: controller.signal });
-            clearTimeout(timeoutId);
-            setIsBackendError(true);
-          } catch {
-            setIsOffline(true);
-          }
+        } else {
+          await checkConnectivity(err);
         }
         throw err;
       }
@@ -350,23 +347,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setLoginPromise(promise);
     return promise;
-  }, []);
+  }, [checkConnectivity]);
 
-  const refreshData = useCallback(async (creds: any, existingData: any) => {
+  const refreshData = useCallback(async (existingData: any) => {
     if (updateInProgress.current) return existingData;
     updateInProgress.current = true;
     setIsUpdating(true);
     setIsBackendError(false);
     setBackendErrorMsg(null);
-    try {
-      const savedCookies = await EncryptionUtils.loadDecrypted("academia_cookies");
-      const portalCookies = await EncryptionUtils.loadDecrypted("portal_cookies") as Record<string, string> | null;
-      const portalCreds = await EncryptionUtils.loadDecrypted("portal_credentials") as any;
 
-      if (portalCookies || portalCreds) {
+    const reportError = (msg: string) => {
+      setIsBackendError(true);
+      setBackendErrorMsg(msg);
+    };
+
+    try {
+      const [academiaCookies, academiaCreds, portalCookies, portalCreds] = (await Promise.all([
+        EncryptionUtils.loadDecrypted("academia_cookies"),
+        EncryptionUtils.loadDecrypted("ratio_credentials"),
+        EncryptionUtils.loadDecrypted("portal_cookies"),
+        EncryptionUtils.loadDecrypted("portal_credentials"),
+      ])) as any[];
+
+      const hasPortal = !!(portalCookies || portalCreds?.password);
+      const hasAcademia = !!(academiaCookies || academiaCreds?.username);
+      const needsAcademia = hasAcademia && (!hasPortal || !localStorage.getItem("ratio_timetable_synced"));
+      if (!hasPortal && !needsAcademia) return existingData;
+
+      let loggedOut = false;
+
+      const refreshPortal = async () => {
         setIsCheckingPortal(true);
         try {
-          const portalRes = await fetchWithLoadBalancer("/portal/refresh", {
+          const res = await fetchWithLoadBalancer("/portal/refresh", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -374,106 +387,102 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               username: portalCreds?.username,
               password: portalCreds?.password,
             }),
-          });
-          if (portalRes.ok) {
-            const portalData = await portalRes.json();
-            if (portalData?.success && portalData.attendance?.length) {
-              let next = { ...existingData, attendance: portalData.attendance };
-              if (portalData.monthly) next.monthly = portalData.monthly;
-              if (portalData.marks) next.marks = portalData.marks;
-              if (portalData.schedule) next.schedule = portalData.schedule;
-              if (portalData.courses) next.courses = portalData.courses;
-              if (portalData.profile) next.profile = portalData.profile;
-              next.isPortal = true;
-              if (portalData.cookies) {
-                await EncryptionUtils.saveEncrypted("portal_cookies", portalData.cookies);
-              }
-              setUserData(next);
-              localStorage.setItem("ratio_data", JSON.stringify(next));
-              window.dispatchEvent(new Event("ratio_refresh_completed"));
-              return next;
+          }, 60000);
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data?.success && data.attendance?.length) {
+            if (data.cookies) {
+              await EncryptionUtils.saveEncrypted("portal_cookies", data.cookies);
+              delete data.cookies;
             }
-          } else if (portalRes.status === 401 && !existingData?.isPortal) {
-            const acadCreds = await EncryptionUtils.loadDecrypted("ratio_credentials") as any;
-            if (portalCreds?.password || acadCreds?.password) {
-              setPortalAuthMode("captcha_only");
-              setPortalAuthOpen(true);
-            }
+            return data;
           }
-        } catch {
+          if (res.status === 401 && portalCreds?.password) {
+            setPortalAuthMode("captcha_only");
+            setPortalAuthOpen(true);
+          }
+          reportError(typeof data?.detail === "string" ? data.detail : "student portal didn't sync");
+          return null;
+        } catch (err) {
+          await checkConnectivity(err);
+          reportError("student portal timed out");
+          return null;
         } finally {
           setIsCheckingPortal(false);
         }
-      }
-
-      if (!savedCookies && !creds?.username) {
-        return existingData;
-      }
-
-      const makeRefreshRequest = async (includePassword: boolean) => {
-        const body: Record<string, unknown> = { username: creds.username, cookies: savedCookies };
-        if (includePassword) body.password = creds.password;
-        return fetchWithLoadBalancer("/refresh", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
       };
 
-      let response = await makeRefreshRequest(false);
-
-      if (response.status === 503 || response.status === 429 || response.status === 502 || response.status === 504) {
-        setIsBackendError(true);
+      const refreshAcademia = async () => {
+        const send = (withPassword: boolean) => fetchWithLoadBalancer("/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: academiaCreds?.username,
+            cookies: academiaCookies,
+            ...(withPassword ? { password: academiaCreds?.password } : {}),
+          }),
+        });
         try {
-          const data = await response.json();
-          if (data.detail) setBackendErrorMsg(data.detail);
-        } catch {}
-        return existingData;
-      }
-
-      if (response.status === 401) {
-        const errData = await response.json().catch(() => ({}));
-        const isAuthError = errData?.detail?.type === "INVALID_CREDENTIALS" || errData?.detail === "Invalid Credentials";
-        const isSessionExpired = errData?.detail?.type === "SESSION_EXPIRED";
-
-        if (isSessionExpired && creds.password) {
-          response = await makeRefreshRequest(true);
-          if (!response.ok) {
-            if (response.status === 401) await logout();
-            return existingData;
+          let res = await send(false);
+          let retried = false;
+          if (res.status === 401 && academiaCreds?.password) {
+            const err = await res.clone().json().catch(() => ({}));
+            if (err?.detail?.type === "SESSION_EXPIRED") {
+              res = await send(true);
+              retried = true;
+            }
           }
-        } else if (isAuthError) {
-          await logout();
-          return existingData;
-        } else {
-          return existingData;
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data?.success) {
+            const invalid = data?.detail === "Invalid Credentials" || data?.detail?.type === "INVALID_CREDENTIALS";
+            if (res.status === 401 && !hasPortal && (retried || invalid)) {
+              loggedOut = true;
+              await logout();
+              return null;
+            }
+            reportError(typeof data?.detail === "string" ? data.detail : hasPortal ? "timetable didn't sync" : "academia didn't sync");
+            return null;
+          }
+          if (data.cookies) {
+            await EncryptionUtils.saveEncrypted("academia_cookies", data.cookies);
+            delete data.cookies;
+          }
+          return data;
+        } catch (err) {
+          await checkConnectivity(err);
+          return null;
+        }
+      };
+
+      const [portalData, academiaData] = await Promise.all([
+        hasPortal ? refreshPortal() : null,
+        needsAcademia ? refreshAcademia() : null,
+      ]);
+
+      if (loggedOut || (!portalData && !academiaData)) return existingData;
+
+      const fresh: Record<string, any> = {};
+      if (portalData) {
+        fresh.attendance = portalData.attendance;
+        fresh.isPortal = true;
+        for (const key of ["monthly", "marks", "schedule", "courses", "profile"]) {
+          if (portalData[key]) fresh[key] = portalData[key];
         }
       }
-
-      const result = await response.json();
-      if (!result.success || (!result.attendance && !result.marks && !result.timetable)) {
-        return existingData;
+      if (academiaData) {
+        const { success, ...rest } = academiaData;
+        if (!hasPortal) Object.assign(fresh, rest);
+        else if (rest.schedule) {
+          fresh.schedule = rest.schedule;
+          localStorage.setItem("ratio_timetable_synced", "1");
+        }
       }
 
       EncryptionUtils.setSessionCookie();
 
-      let updatedCookies = savedCookies;
-      if (result.cookies) {
-        await EncryptionUtils.saveEncrypted("academia_cookies", result.cookies);
-        updatedCookies = result.cookies;
-        delete result.cookies;
-      }
-
+      const mergedData = { ...existingData, ...fresh };
       const hasOldData = (existingData?.attendance?.length > 0) || (existingData?.marks?.length > 0);
-      
-      const diff = hasOldData ? compareData(existingData, { ...existingData, ...result }) : null;
-      
-      let mergedData = {
-        ...existingData,
-        ...result,
-        cookies: updatedCookies,
-      };
-      
+      const diff = hasOldData ? compareData(existingData, mergedData) : null;
+
       if (diff) {
         setLatestDiff(diff);
         const timestamp = Date.now();
@@ -482,7 +491,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           timestamp,
           diff,
         };
-        
+
         setUpdateHistory(prev => {
           const updated = cleanupHistory([newHistoryItem, ...prev]);
           localStorage.setItem("ratio_update_history", JSON.stringify(updated));
@@ -507,25 +516,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setUserData(mergedData);
       localStorage.setItem("ratio_data", JSON.stringify(mergedData));
+      window.dispatchEvent(new Event("ratio_refresh_completed"));
       return mergedData;
-    } catch (err: any) {
-      if (err.name === 'AbortError' || err.message === 'Failed to fetch') {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 1200);
-          await fetch("https://1.1.1.1", { method: "HEAD", mode: "no-cors", signal: controller.signal });
-          clearTimeout(timeoutId);
-          setIsBackendError(true);
-        } catch {
-          setIsOffline(true);
-        }
-      }
-      return existingData;
     } finally {
       setIsUpdating(false);
       updateInProgress.current = false;
     }
-  }, [logout]);
+  }, [logout, checkConnectivity]);
 
   useEffect(() => {
     const cachedData = localStorage.getItem("ratio_data");
@@ -545,12 +542,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         parsed = JSON.parse(cachedData);
         setUserData(parsed);
 
-        runMigration().then(async () => {
-          const creds = (await EncryptionUtils.loadDecrypted("ratio_credentials")) ||
-                        (await EncryptionUtils.loadDecrypted("portal_credentials"));
-          if (creds && !hasRefreshed.current) {
+        runMigration().then(() => {
+          if (!hasRefreshed.current) {
             hasRefreshed.current = true;
-            refreshData(creds as any, parsed);
+            refreshData(parsed);
           }
         });
       } catch {

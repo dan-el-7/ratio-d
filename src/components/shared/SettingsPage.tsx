@@ -27,7 +27,6 @@ import {
 import { requestNotificationPermission, getNotifPreference, setNotifPreference } from "@/utils/shared/notifs";
 import { StudentProfile } from "@/types";
 import { useApp } from "@/context/AppContext";
-import { EncryptionUtils } from "@/utils/shared/Encryption";
 import {
   COLOR_THEMES,
   parseTheme,
@@ -288,11 +287,8 @@ const SettingsPage = ({
   };
 
   const handleSync = async () => {
-    const creds = (await EncryptionUtils.loadDecrypted("ratio_credentials")) ||
-                  (await EncryptionUtils.loadDecrypted("portal_credentials"));
-    if (creds && userData) {
-      await refreshData(creds, userData);
-      window.location.reload();
+    if (userData) {
+      await refreshData(userData);
     }
   };
 

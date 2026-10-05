@@ -11,7 +11,6 @@ import {
 import { requestNotificationPermission, getNotifPreference, setNotifPreference } from "@/utils/shared/notifs";
 import { useApp } from "@/context/AppContext";
 import { useTheme } from "@/context/ThemeContext";
-import { EncryptionUtils } from "@/utils/shared/Encryption";
 import {
   COLOR_THEMES, parseTheme, buildTheme, getThemeDisplayName,
   type UiStyle, type ColorTheme,
@@ -271,11 +270,8 @@ export default function DesktopSettings() {
   };
 
   const handleSync = async () => {
-    const creds = (await EncryptionUtils.loadDecrypted("ratio_credentials")) ||
-                  (await EncryptionUtils.loadDecrypted("portal_credentials"));
-    if (creds && userData) {
-      await refreshData(creds as any, userData);
-      window.location.reload();
+    if (userData) {
+      await refreshData(userData);
     }
   };
 

@@ -701,13 +701,15 @@ async def portal_login(creds: PortalCredentials, request: Request):
 @app.post("/portal/refresh")
 @limiter.limit("60/minute")
 async def portal_refresh(creds: PortalCredentials, request: Request):
-    if not creds.cookies:
+    if not creds.cookies and not (creds.username and creds.password):
         raise HTTPException(status_code=401, detail={"type": "SESSION_EXPIRED"})
     client = PortalClient(creds.cookies)
-    att_html, marks = await asyncio.gather(
-        client.get_attendance_html(),
-        client.get_marks_data()
-    )
+    att_html, marks = None, []
+    if creds.cookies:
+        att_html, marks = await asyncio.gather(
+            client.get_attendance_html(),
+            client.get_marks_data()
+        )
     if att_html is None:
         if creds.username and creds.password:
             print("  -> [OCR] Portal session expired. Running background re-auth...", flush=True)

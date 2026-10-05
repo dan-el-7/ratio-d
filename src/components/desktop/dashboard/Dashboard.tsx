@@ -17,7 +17,6 @@ import { useAcademiaData } from "@/hooks/useAcademiaData";
 import { useDashboardCalendar } from "@/hooks/useDashboardCalendar";
 import { useDashboardAlerts } from "@/hooks/useDashboardAlerts";
 import { useAppLayout } from "@/context/AppLayoutContext";
-import { EncryptionUtils } from "@/utils/shared/Encryption";
 import {
   calculateOverallAttendance,
   getCriticalAttendance,
@@ -75,10 +74,8 @@ export default function DesktopDashboard() {
   }, []);
 
   const handleRefresh = useCallback(async () => {
-    const creds = (await EncryptionUtils.loadDecrypted("ratio_credentials")) ||
-                  (await EncryptionUtils.loadDecrypted("portal_credentials"));
-    if (creds && userData) {
-      await refreshData(creds as any, userData);
+    if (userData) {
+      await refreshData(userData);
     }
   }, [userData, refreshData]);
 
