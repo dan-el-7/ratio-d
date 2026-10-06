@@ -51,20 +51,21 @@ const render = (cancelledClasses, overrides = {}) => renderToStaticMarkup(React.
   displayGrid: [slot], selectedDay: 2, currentDayOrder: 2, isHoliday: false,
   cancelledClasses, ...overrides,
 }));
-const countX = (html) => (html.match(/aria-label="Cancelled"/g) || []).length;
+const countCancellationLabels = (html) => (html.match(/aria-label="Cancelled"/g) || []).length;
 
 const recurring = render(cancellation);
-assert.equal(countX(recurring), 1, "recurring day-order cancellation renders an X");
-assert.equal((recurring.match(/>X<\/span>/g) || []).length, 1, "the cancellation marker is a literal uppercase X");
+assert.equal(countCancellationLabels(recurring), 1, "recurring day-order cancellation renders a cancellation label");
+assert.equal((recurring.match(/>\(cancelled\)<\/span>/g) || []).length, 1, "the cancellation label includes parentheses");
+assert.ok(recurring.indexOf("(cancelled)") > recurring.indexOf(slot.time), "the cancellation label appears after the time");
 assert.doesNotMatch(recurring, /status-boxbg-safe/, "cancelled current class loses active green styling");
-assert.equal(countX(render(cancellation, { selectedDay: 3 })), 0, "a different day order does not inherit a recurring cancellation");
+assert.equal(countCancellationLabels(render(cancellation, { selectedDay: 3 })), 0, "a different day order does not inherit a recurring cancellation");
 
 const exactDateRule = { "cs101|A1": { dayOrders: [], dates: ["2026-10-08"] } };
-assert.equal(countX(render(exactDateRule, { cancellationDate: "2026-10-08" })), 1, "exact date cancellation renders an X");
-assert.equal(countX(render(exactDateRule, { cancellationDate: "2026-10-09" })), 0, "different date does not inherit a one-off cancellation");
-assert.equal(countX(render({})), 0, "a class without a cancellation stays unmarked");
-assert.equal(countX(render({}, { cancellationDate: "2026-10-08" })), 0, "clearing cancellation removes the X");
-assert.equal(countX(render(cancellation, { displayGrid: [slot, { ...slot, id: "extra-1" }] })), 2, "extra slots use the same cancellation rendering");
+assert.equal(countCancellationLabels(render(exactDateRule, { cancellationDate: "2026-10-08" })), 1, "exact date cancellation renders a cancellation label");
+assert.equal(countCancellationLabels(render(exactDateRule, { cancellationDate: "2026-10-09" })), 0, "different date does not inherit a one-off cancellation");
+assert.equal(countCancellationLabels(render({})), 0, "a class without a cancellation stays unmarked");
+assert.equal(countCancellationLabels(render({}, { cancellationDate: "2026-10-08" })), 0, "clearing cancellation removes the cancellation label");
+assert.equal(countCancellationLabels(render(cancellation, { displayGrid: [slot, { ...slot, id: "extra-1" }] })), 2, "extra slots use the same cancellation rendering");
 
 const today = new Date(2026, 9, 6);
 const calendar = [

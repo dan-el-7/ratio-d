@@ -103,19 +103,8 @@ export default function ScheduleGrid({
       <motion.div
         key={`${slot.id}-${index}`}
         variants={slotVariants}
-        className={`aspect-square rounded-[15px] border-[1.5px] flex flex-col items-center justify-center gap-[1px] min-[380px]:gap-[2px] p-0.5 min-[380px]:p-1 transition-all relative ${boxClass}`}
-        style={{ containerType: "inline-size" }}
+        className={`aspect-square rounded-[15px] border-[1.5px] flex flex-col items-center justify-center gap-[1px] min-[380px]:gap-[2px] p-0.5 min-[380px]:p-1 transition-all ${boxClass}`}
       >
-        {isCancelled && (
-          <span
-            aria-label="Cancelled"
-            title="Cancelled"
-            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center text-[75cqw] font-light leading-none text-theme-text opacity-75"
-            style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
-          >
-            X
-          </span>
-        )}
         <span
           className={`text-[7px] min-[380px]:text-[8px] md:text-[8px] font-bold uppercase tracking-tight leading-none text-center truncate w-full px-1 mb-0.5 ${topText}`}
           style={{ fontFamily: "var(--font-afacad), sans-serif" }}
@@ -123,7 +112,7 @@ export default function ScheduleGrid({
           {slot.room}
         </span>
         <span
-          className={`relative z-0 text-[11px] min-[380px]:text-[13px] min-[420px]:text-[14px] md:text-[15px] font-black uppercase tracking-tight leading-none overflow-hidden text-center w-full px-0.5 ${midText}`}
+          className={`text-[11px] min-[380px]:text-[13px] min-[420px]:text-[14px] md:text-[15px] font-black uppercase tracking-tight leading-none overflow-hidden text-center w-full px-0.5 ${midText}`}
           style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
         >
           {slot.sub}
@@ -134,6 +123,15 @@ export default function ScheduleGrid({
         >
           {slot.time}
         </span>
+        {isCancelled && (
+          <span
+            aria-label="Cancelled"
+            className="mt-0.5 w-full text-center text-[7px] min-[380px]:text-[8px] font-medium leading-none text-theme-text opacity-75"
+            style={{ fontFamily: "var(--font-afacad), sans-serif" }}
+          >
+            (cancelled)
+          </span>
+        )}
       </motion.div>
     );
   };

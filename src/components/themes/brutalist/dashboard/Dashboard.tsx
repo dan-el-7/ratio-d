@@ -314,7 +314,6 @@ const HomeDashboard = ({
                         {displayNext.bottom}
                       </span>
                     </div>
-                    {nextClassCancelled && <span aria-label="Cancelled" title="Cancelled" className="mt-2 self-start text-3xl font-black leading-none text-[#ff003c]">×</span>}
                   </motion.div>
                 )}
 
@@ -332,8 +331,14 @@ const HomeDashboard = ({
                       {isHoliday
                         ? "🌴 holiday today"
                         : timeStatus?.currentClass
-                        ? `⭐ current: ${timeStatus.currentClass.course}${timeStatus.currentClass.type === "lab" ? " (P)" : ""}${currentClassCancelled ? " ×" : ""}`
+                        ? `⭐ current: ${timeStatus.currentClass.course}${timeStatus.currentClass.type === "lab" ? " (P)" : ""}`
                         : "☕ currently free"}
+                      {currentClassCancelled && (
+                        <>
+                          <span className="mt-1 block text-center">{timeStatus.currentClass.time}</span>
+                          <span aria-label="Cancelled" className="mt-1 block text-center">(cancelled)</span>
+                        </>
+                      )}
                     </div>
                     {!isHoliday && timeStatus?.currentClass && (
                       <div
@@ -349,6 +354,7 @@ const HomeDashboard = ({
                         style={{ fontFamily: "Aonic" }}
                       >
                         ⏰ {timeStatus.nextClass.time}{timeStatus.nextClass.type === "lab" ? " (P)" : ""}
+                        {nextClassCancelled && <span aria-label="Cancelled" className="mt-1 block text-center">(cancelled)</span>}
                       </div>
                     )}
                     {isTomorrowHoliday && (
