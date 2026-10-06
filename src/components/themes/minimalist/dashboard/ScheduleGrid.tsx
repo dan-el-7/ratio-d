@@ -110,7 +110,7 @@ export default function ScheduleGrid({
           <span
             aria-label="Cancelled"
             title="Cancelled"
-            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-[75cqw] font-light leading-none text-theme-text opacity-40"
+            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center text-[75cqw] font-light leading-none text-theme-text opacity-40"
             style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
           >
             X
@@ -123,7 +123,7 @@ export default function ScheduleGrid({
           {slot.room}
         </span>
         <span
-          className={`text-[11px] min-[380px]:text-[13px] min-[420px]:text-[14px] md:text-[15px] font-black uppercase tracking-tight leading-none overflow-hidden text-center w-full px-0.5 ${midText}`}
+          className={`relative z-0 text-[11px] min-[380px]:text-[13px] min-[420px]:text-[14px] md:text-[15px] font-black uppercase tracking-tight leading-none overflow-hidden text-center w-full px-0.5 ${midText}`}
           style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
         >
           {slot.sub}
