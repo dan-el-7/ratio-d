@@ -55,6 +55,7 @@ const countX = (html) => (html.match(/aria-label="Cancelled"/g) || []).length;
 
 const recurring = render(cancellation);
 assert.equal(countX(recurring), 1, "recurring day-order cancellation renders an X");
+assert.equal((recurring.match(/>X<\/span>/g) || []).length, 1, "the cancellation marker is a literal uppercase X");
 assert.doesNotMatch(recurring, /status-boxbg-safe/, "cancelled current class loses active green styling");
 assert.equal(countX(render(cancellation, { selectedDay: 3 })), 0, "a different day order does not inherit a recurring cancellation");
 
