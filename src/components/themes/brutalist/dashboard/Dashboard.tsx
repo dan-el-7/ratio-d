@@ -19,6 +19,8 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { Haptics } from "@/utils/shared/haptics";
 import { useApp } from "@/context/AppContext";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { useClassCancellations } from "@/hooks/useClassCancellations";
+import { isClassCancelled } from "@/utils/timetable/classCancellations";
 
 const ScoreCounter = ({ value }: any) => {
   const nodeRef = useRef<any>(null);
@@ -119,6 +121,7 @@ const HomeDashboard = ({
   academia,
 }: HomeDashboardProps) => {
   const { profileSeed } = useApp();
+  const { cancelledClasses } = useClassCancellations();
   const router = useRouter();
   const [isAlertExpanded, setIsAlertExpanded] = useState(false);
   const [isMetricExpanded, setIsMetricExpanded] = useState(false);
@@ -166,6 +169,18 @@ const HomeDashboard = ({
   const nextSubject = isHoliday
     ? "holiday today"
     : timeStatus?.nextClass?.course || "no more classes";
+  const nextClassCancelled = !isHoliday && !!timeStatus?.nextClass && isClassCancelled(
+    cancelledClasses,
+    timeStatus.nextClass,
+    academia?.effectiveDayOrder,
+    new Date(),
+  );
+  const currentClassCancelled = !isHoliday && !!timeStatus?.currentClass && isClassCancelled(
+    cancelledClasses,
+    timeStatus.currentClass,
+    academia?.effectiveDayOrder,
+    new Date(),
+  );
   const nextSubjectSplit = nextSubject.split(" ");
   const displayNext =
     nextSubjectSplit.length > 1
@@ -299,6 +314,7 @@ const HomeDashboard = ({
                         {displayNext.bottom}
                       </span>
                     </div>
+                    {nextClassCancelled && <span aria-label="Cancelled" title="Cancelled" className="mt-2 self-start text-3xl font-black leading-none text-[#ff003c]">×</span>}
                   </motion.div>
                 )}
 
@@ -316,7 +332,7 @@ const HomeDashboard = ({
                       {isHoliday
                         ? "🌴 holiday today"
                         : timeStatus?.currentClass
-                        ? `⭐ current: ${timeStatus.currentClass.course}${timeStatus.currentClass.type === "lab" ? " (P)" : ""}`
+                        ? `⭐ current: ${timeStatus.currentClass.course}${timeStatus.currentClass.type === "lab" ? " (P)" : ""}${currentClassCancelled ? " ×" : ""}`
                         : "☕ currently free"}
                     </div>
                     {!isHoliday && timeStatus?.currentClass && (
