@@ -106,7 +106,16 @@ export default function ScheduleGrid({
         className={`aspect-square rounded-[15px] border-[1.5px] flex flex-col items-center justify-center gap-[1px] min-[380px]:gap-[2px] p-0.5 min-[380px]:p-1 transition-all relative ${boxClass}`}
         style={{ containerType: "inline-size" }}
       >
-        {isCancelled && <span aria-label="Cancelled" title="Cancelled" className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-[calc(200cqw-60px)] font-medium leading-none text-theme-muted/35">X</span>}
+        {isCancelled && (
+          <span
+            aria-label="Cancelled"
+            title="Cancelled"
+            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-[75cqw] font-light leading-none text-theme-text opacity-40"
+            style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
+          >
+            X
+          </span>
+        )}
         <span
           className={`text-[7px] min-[380px]:text-[8px] md:text-[8px] font-bold uppercase tracking-tight leading-none text-center truncate w-full px-1 mb-0.5 ${topText}`}
           style={{ fontFamily: "var(--font-afacad), sans-serif" }}
