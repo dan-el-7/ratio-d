@@ -110,7 +110,7 @@ export default function ScheduleGrid({
           <span
             aria-label="Cancelled"
             title="Cancelled"
-            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center text-[130cqw] font-light leading-none text-theme-text opacity-50"
+            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center text-[75cqw] font-light leading-none text-theme-text opacity-50"
             style={{ fontFamily: "var(--font-montserrat), sans-serif" }}
           >
             X
